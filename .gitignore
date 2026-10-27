@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Private toolbox
+.venv/
+
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+token.json
+client_secret*.json
+
+# Databases
+*.sqlite3
+*.db
+
+# Runtime folders: keep the folder, ignore the contents
+data/*
+!data/.gitkeep
+backups/*
+!backups/.gitkeep
+logs/*
+!logs/.gitkeep
+media/
+staticfiles/
+
+# Editor and system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
