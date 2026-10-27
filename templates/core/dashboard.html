@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <h1 class="h3 mb-1">Welcome, {{ user.first_name|default:user.username }}</h1>
+  <p class="text-secondary mb-0">Here is the state of your Sarthi system.</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="card sarthi-stat h-100"><div class="card-body d-flex align-items-center gap-3">
+    {% if db_ok %}<i class="bi bi-heart-pulse fs-1 text-success"></i>{% else %}<i class="bi bi-exclamation-octagon fs-1 text-danger"></i>{% endif %}
+    <div><div class="text-secondary small">Database</div><div class="fw-semibold">{% if db_ok %}Healthy{% else %}Problem - check the logs{% endif %}</div></div>
+  </div></div></div>
+
+  {% if user.is_staff %}
+  <div class="col-sm-6 col-xl-3"><div class="card sarthi-stat h-100"><div class="card-body d-flex align-items-center gap-3">
+    {% if backup_warning %}<i class="bi bi-shield-exclamation fs-1 text-warning"></i>{% else %}<i class="bi bi-shield-check fs-1 text-success"></i>{% endif %}
+    <div><div class="text-secondary small">Last backup</div>
+    <div class="fw-semibold">{% if latest_backup %}{{ latest_backup.created_text }}{% else %}None yet{% endif %}</div>
+    {% if backup_warning %}<div class="small text-warning">No backup in the last 48 hours</div>{% endif %}</div>
+  </div></div></div>
+
+  <div class="col-sm-6 col-xl-3"><div class="card sarthi-stat h-100"><div class="card-body d-flex align-items-center gap-3">
+    <i class="bi bi-hdd-stack fs-1 text-primary"></i>
+    <div><div class="text-secondary small">Backups stored</div><div class="fw-semibold">{{ backup_count }}</div></div>
+  </div></div></div>
+
+  <div class="col-sm-6 col-xl-3"><div class="card sarthi-stat h-100"><div class="card-body d-flex align-items-center gap-3">
+    <i class="bi bi-activity fs-1 text-info"></i>
+    <div><div class="text-secondary small">Activity (24 hours)</div><div class="fw-semibold">{{ events_24h }} events</div></div>
+  </div></div></div>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7"><div class="card sarthi-stat h-100"><div class="card-body">
+    <h2 class="h6">Your apps</h2>
+    <p class="text-secondary mb-0">No apps are installed yet. The first one (Tasks and Reminders) comes in Phase 3, and it will appear in the left menu automatically.</p>
+  </div></div></div>
+
+  {% if user.is_staff %}
+  <div class="col-lg-5"><div class="card sarthi-stat h-100"><div class="card-body">
+    <h2 class="h6">Recent activity</h2>
+    {% for e in recent_events %}
+    <div class="small border-bottom py-1"><span class="text-secondary">{{ e.timestamp|date:"d-m H:i" }}</span> &middot; {{ e.username }} &middot; {{ e.get_action_display }}</div>
+    {% empty %}<p class="text-secondary mb-0">Nothing yet.</p>{% endfor %}
+    <a class="small" href="{% url 'audit' %}">Open full audit log</a>
+  </div></div></div>
+  {% endif %}
+</div>
+{% endblock %}

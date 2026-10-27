@@ -55,6 +55,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.core.context_processors.shell",
             ],
         },
     },
@@ -161,3 +162,17 @@ LOGGING = {
         "level": LOG_LEVEL,
     },
 }
+
+
+# ---- Phase 2: login pages, messages, backups ----
+from django.contrib.messages import constants as message_constants
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
+MESSAGE_TAGS = {message_constants.ERROR: "danger"}
+
+BACKUP_DIR = BASE_DIR / "backups"
+BACKUP_ENCRYPTION_KEY = env("BACKUP_ENCRYPTION_KEY", default="")
+BACKUP_COPY_DIR = env("BACKUP_COPY_DIR", default="")
+BACKUP_KEEP_AUTO = env.int("BACKUP_KEEP_AUTO", default=14)

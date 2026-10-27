@@ -4,6 +4,7 @@ import uuid
 
 from django.shortcuts import render
 
+from .context import current_request_var
 from .exceptions import SarthiError
 from .logging_utils import request_id_var
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class RequestIdMiddleware:
-    """Gives every request a short ID, used in logs and the X-Request-ID header."""
+    """Gives every request a short ID and remembers the request for the audit trail."""
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -19,11 +20,13 @@ class RequestIdMiddleware:
     def __call__(self, request):
         request_id = uuid.uuid4().hex[:12]
         request.request_id = request_id
-        token = request_id_var.set(request_id)
+        id_token = request_id_var.set(request_id)
+        request_token = current_request_var.set(request)
         try:
             response = self.get_response(request)
         finally:
-            request_id_var.reset(token)
+            current_request_var.reset(request_token)
+            request_id_var.reset(id_token)
         response["X-Request-ID"] = request_id
         return response
 

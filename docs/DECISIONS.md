@@ -12,3 +12,9 @@
 - 27-10-2026: Soft delete by default via BaseModel; hard_delete() only on purpose.
 - 27-10-2026: Every log line carries a request ID; unknown errors are logged privately and shown generically.
 - 27-10-2026: Django admin is the temporary data-entry screen until the dashboard (Phase 2).
+- 27-10-2026: Restore is a typed PowerShell command, not a web button (replaces the whole database).
+- 27-10-2026: Audit log stores changed field names only, never values (so it never becomes a second copy of private data).
+- 27-10-2026: Backups are encrypted with a Fernet key kept in .env; the key must also be stored outside the PC.
+- 27-10-2026: Optional second backup location (BACKUP_COPY_DIR) because a same-disk backup does not survive a disk failure.
+- 27-10-2026: Sidebar menu is a registry; each app registers its own entry, so the core is never edited to add an app.
+- 27-10-2026: Bootstrap files are stored locally in static/vendor (no dependency on a CDN at run time).

@@ -41,3 +41,9 @@ Paste AGENTS.md and CURRENT_STATE.md, then say which phase or step you are on.
 - Run tests: python manage.py test
 - Phase smoke test: .\scripts\smoke_phase1.ps1
 - Work on branch develop. Merge into main only after the smoke test passes.
+
+## Phase 2 rules
+- New apps: register a sidebar entry with register_menu() in AppConfig.ready().
+- Data models inherit BaseModel (soft delete plus audit trail). A model __str__ must not contain private numbers.
+- Backups: python manage.py backup_db | verify_backup | restore_backup FILENAME. Keep the .env copy outside the PC.
+- Phase smoke test: .\scripts\smoke_phase2.ps1
