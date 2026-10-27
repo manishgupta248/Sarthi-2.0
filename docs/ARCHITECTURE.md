@@ -43,3 +43,28 @@
 - Restore is command-line only, needs typed confirmation, and makes a safety backup first.
 - LOSING THE KEY MAKES BACKUPS UNREADABLE. Keep a copy of .env in a safe place outside the PC.
 - Windows Task Scheduler task "Sarthi Daily Backup" runs at 21:00 (runs later if the PC was off).
+
+## Phase 3 additions
+
+### Encryption (apps/core/fields.py)
+- Key: FIELD_ENCRYPTION_KEY in .env (optional FIELD_ENCRYPTION_OLD_KEYS list for key rotation).
+- EncryptedTextField: text stored encrypted in the database, plain in the app. Cannot be searched or filtered.
+- encrypt_bytes / decrypt_bytes: used for vault files.
+- LOSING THE KEY MAKES ENCRYPTED DATA UNRECOVERABLE. Keep a copy of .env outside the PC.
+
+### Family app (apps/family)
+- Person (BaseModel): full_name, relationship, date_of_birth, notes (encrypted). Not a login user. Shared by every later app.
+
+### Vault app (apps/vault)
+- Document (BaseModel): title, type, person, notes (encrypted), expiry date, file details. Titles are NOT encrypted (they show in lists and the audit log): never put account numbers in a title.
+- Files are encrypted and stored as data/vault/<xx>/<random>.bin. Never served as static files; downloads go through a login-protected page and are audited.
+- Allowed: PDF, JPG, PNG, .docx, .xlsx, max 10 MB. File contents are checked against the extension. Macro files (.docm, .xlsm, vbaProject) and old .doc/.xls are refused. Sarthi never opens or runs the files.
+- Other apps link to documents with a ManyToManyField to vault.Document (the vault never depends on finance).
+
+### Backups (updated)
+- Backup zip format 2: database + manifest + vault files, every file checksummed. Phase 2 backups still restore.
+- Restore adds or overwrites vault files, never deletes them. A safety backup is made first.
+- Safety stop at about 700 MB of vault content (backups are built in memory).
+
+### Sessions
+- Sign-out after SESSION_IDLE_MINUTES (default 30) of inactivity.

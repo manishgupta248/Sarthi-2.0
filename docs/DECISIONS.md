@@ -18,3 +18,10 @@
 - 27-10-2026: Optional second backup location (BACKUP_COPY_DIR) because a same-disk backup does not survive a disk failure.
 - 27-10-2026: Sidebar menu is a registry; each app registers its own entry, so the core is never edited to add an app.
 - 27-10-2026: Bootstrap files are stored locally in static/vendor (no dependency on a CDN at run time).
+- 27-10-2026: Roadmap re-ordered: Family and Vault foundation (3), Wealth v1 (4), Wealth v2 (5), Tasks and Reminders (6), Telegram (7), Google (8), LLM (9), stocks/health/other apps (10).
+- 27-10-2026: One encryption key (FIELD_ENCRYPTION_KEY) for encrypted fields and vault files, with an old-keys list for later rotation.
+- 27-10-2026: Vault accepts PDF, JPG, PNG, docx, xlsx only; macros and legacy Office formats refused; files are never opened by Sarthi.
+- 27-10-2026: Family members are plain records (Person), not login users. Nominee will be chosen from this list.
+- 27-10-2026: Delete means archive (soft delete); administrators restore via the admin site.
+- 27-10-2026: Idle sign-out after 30 minutes (rolling session).
+- 27-10-2026: Never store passwords, PINs, CVV, OTPs or full card numbers anywhere in Sarthi.

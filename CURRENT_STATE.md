@@ -5,23 +5,26 @@ Last updated: 27-10-2026
 ## Phase status
 - Phase 0 (setup, Git, documents): done
 - Phase 1 (core): done
-- Phase 2 (dashboard shell, audit trail, backup and restore): done when the Phase 2 smoke test passes and main is updated
-- Phase 3 (Tasks and Reminders app): not started
+- Phase 2 (dashboard shell, audit trail, backup and restore): done
+- Phase 3 (family and vault foundation): done when the Phase 3 smoke test passes and main is updated
+- Phase 4 (Wealth v1: accounts, snapshots, transactions, dashboard): not started
 
 ## What exists
-- Everything from Phase 1 (Django 5.2, custom user, settings split, logging, error handling, health page, tests)
-- Login page and Bootstrap 5 dashboard shell with plug-in sidebar menu, dark mode, mobile layout
-- Audit trail (AuditLog, read-only, field names only) visible at /system/audit/
-- Encrypted backups: web page /system/backups/, commands backup_db, verify_backup, restore_backup
-- Daily automatic backup via Windows Task Scheduler ("Sarthi Daily Backup", 21:00)
-- Restore drill completed successfully
+- Everything from Phases 1 and 2
+- Family app (people records) and Document vault (encrypted files: PDF, JPG, PNG, docx, xlsx)
+- EncryptedTextField for sensitive text; FIELD_ENCRYPTION_KEY in .env
+- Backups include vault files (zip format 2); restore drill with files passed
+- 30-minute idle sign-out
+- Soft delete and audit trail now exercised by a real model (Person, Document)
 
 ## Next
-Phase 3: first real app (Tasks and Reminders, manual entry) built on BaseModel and the menu registry. Also decide how the stable main version is run day to day.
+Phase 4: Wealth v1 (institutions, accounts with encrypted numbers and masked display with audited reveal, balance snapshots, major transactions with reconciliation, wealth dashboard with charts). Accounts link to documents and nominee from the Person list.
 
 ## Known issues and open items
 - No login lockout after repeated wrong passwords. Add django-axes before Sarthi is reachable from anywhere except this PC.
-- Soft delete (BaseModel) has no automated test yet; it will be tested with the first real model in Phase 3.
 - Production run method (serving static files when DEBUG is off, for example WhiteNoise plus Waitress) is not set up yet.
-- SQLite WAL mode not enabled yet (consider when the Telegram bot and web run together).
+- SQLite WAL mode not enabled yet.
+- Backups are built in memory; vault limit about 700 MB before a redesign is needed.
+- Uploads larger than the limit are rejected only after Django has received them (single-user PC, low risk).
 - Windows may print a harmless warning when a log file rotates while the dev server auto-reloads.
+- Dashboard has no widgets from other apps yet; a widget registry will be added with the wealth dashboard.

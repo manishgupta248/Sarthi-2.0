@@ -47,3 +47,11 @@ Paste AGENTS.md and CURRENT_STATE.md, then say which phase or step you are on.
 - Data models inherit BaseModel (soft delete plus audit trail). A model __str__ must not contain private numbers.
 - Backups: python manage.py backup_db | verify_backup | restore_backup FILENAME. Keep the .env copy outside the PC.
 - Phase smoke test: .\scripts\smoke_phase2.ps1
+
+## Phase 3 rules
+- Sensitive text fields use EncryptedTextField (apps.core.fields). Never put private numbers in titles or __str__ (they appear in lists and the audit log).
+- Documents and files go through the vault (apps/vault). Link to them with a ManyToManyField to vault.Document.
+- People live only in apps/family (Person). Other apps link to Person.
+- NEVER store passwords, PINs, CVV, OTPs or full card numbers.
+- Keep a copy of .env (SECRET_KEY, BACKUP_ENCRYPTION_KEY, FIELD_ENCRYPTION_KEY) outside the PC.
+- Phase smoke test: .\scripts\smoke_phase3.ps1

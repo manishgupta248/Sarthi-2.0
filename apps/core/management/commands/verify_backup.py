@@ -24,6 +24,6 @@ class Command(BaseCommand):
         users = "unknown" if info["users"] is None else info["users"]
         self.stdout.write(self.style.SUCCESS(
             f"Backup {info['name']} is healthy "
-            f"({info['tables']} tables, {users} users, "
+            f"({info['tables']} tables, {users} users, {info['vault_files']} vault files, "
             f"encrypted: {'yes' if info['encrypted'] else 'no'})"
         ))

@@ -27,6 +27,8 @@ INSTALLED_APPS = [
     # Sarthi core apps
     "apps.core",
     "apps.accounts",
+    "apps.family",
+    "apps.vault",
 ]
 
 MIDDLEWARE = [
@@ -176,3 +178,15 @@ BACKUP_DIR = BASE_DIR / "backups"
 BACKUP_ENCRYPTION_KEY = env("BACKUP_ENCRYPTION_KEY", default="")
 BACKUP_COPY_DIR = env("BACKUP_COPY_DIR", default="")
 BACKUP_KEEP_AUTO = env.int("BACKUP_KEEP_AUTO", default=14)
+
+
+# ---- Phase 3: private data (encryption, vault, sessions) ----
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
+FIELD_ENCRYPTION_OLD_KEYS = env.list("FIELD_ENCRYPTION_OLD_KEYS", default=[])
+VAULT_DIR = BASE_DIR / "data" / "vault"
+VAULT_MAX_UPLOAD_MB = env.int("VAULT_MAX_UPLOAD_MB", default=10)
+
+# Sign out automatically after this many idle minutes
+SESSION_IDLE_MINUTES = env.int("SESSION_IDLE_MINUTES", default=30)
+SESSION_COOKIE_AGE = SESSION_IDLE_MINUTES * 60
+SESSION_SAVE_EVERY_REQUEST = True

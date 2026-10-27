@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import path
+from django.urls import include, path
 
 from apps.core import views as core_views
 
@@ -11,6 +11,8 @@ urlpatterns = [
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("system/backups/", core_views.backups_page, name="backups"),
     path("system/audit/", core_views.audit_page, name="audit"),
+    path("family/", include("apps.family.urls")),
+    path("vault/", include("apps.vault.urls")),
     path("health/", core_views.health, name="health"),
     path("admin/", admin.site.urls),
 ]

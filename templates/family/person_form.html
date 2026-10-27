@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{% if person %}Edit person{% else %}Add person{% endif %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{% if person %}Edit {{ person.full_name }}{% else %}Add a family member{% endif %}</h1>
+<div class="card sarthi-stat" style="max-width:640px;"><div class="card-body">
+  <form method="post">{% csrf_token %}
+    {% include "core/_form.html" %}
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-outline-secondary" href="{% url 'family_list' %}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

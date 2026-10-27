@@ -1,4 +1,4 @@
-"""Backup, verify and restore for the Sarthi database."""
+"""Backup, verify and restore for the Sarthi database and the document vault."""
 import hashlib
 import io
 import json
@@ -28,8 +28,11 @@ KINDS = ("manual", "auto", "pre-restore")
 FILENAME_RE = re.compile(
     r"^sarthi_(?P<kind>[a-z-]+)_(?P<stamp>\d{8}_\d{6})\.zip(?P<enc>\.enc)?$"
 )
+VAULT_FILE_RE = re.compile(r"^[0-9a-f]{2}/[0-9a-f]{32}\.bin$")
 DB_MEMBER = "db.sqlite3"
 MANIFEST_MEMBER = "manifest.json"
+VAULT_PREFIX = "vault/"
+MAX_VAULT_BYTES = 700 * 1024 * 1024
 
 
 class BackupError(SarthiError):
@@ -62,6 +65,19 @@ def _fernet():
 
 def _sha256_bytes(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def _vault_files():
+    """All stored vault files as (relative name, full path)."""
+    root = Path(settings.VAULT_DIR)
+    if not root.is_dir():
+        return []
+    items = []
+    for path in root.rglob("*.bin"):
+        rel = path.relative_to(root).as_posix()
+        if path.is_file() and VAULT_FILE_RE.match(rel):
+            items.append((rel, path))
+    return sorted(items)
 
 
 def _snapshot_database(source, destination):
@@ -99,6 +115,11 @@ def create_backup(kind="manual", db_path=None):
     source = _live_db_path(db_path)
     if not source.exists():
         raise BackupError("The database file was not found.")
+    vault_files = _vault_files()
+    if sum(path.stat().st_size for _rel, path in vault_files) > MAX_VAULT_BYTES:
+        raise BackupError(
+            "The document vault is too large for the current backup method. Tell your developer."
+        )
     folder = _backup_dir()
     fernet = _fernet()
     stamp = timezone.localtime().strftime("%Y%m%d_%H%M%S")
@@ -107,17 +128,23 @@ def create_backup(kind="manual", db_path=None):
         db_copy = Path(tmp) / DB_MEMBER
         _snapshot_database(source, db_copy)
         db_bytes = db_copy.read_bytes()
+        vault_manifest = {rel: _sha256_bytes(path.read_bytes()) for rel, path in vault_files}
         manifest = {
             "app": "sarthi",
+            "format": 2,
             "version": settings.SARTHI_VERSION,
             "created_at": timezone.now().isoformat(),
             "kind": kind,
             "db_sha256": _sha256_bytes(db_bytes),
             "db_bytes": len(db_bytes),
+            "vault": vault_manifest,
         }
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as bundle:
             bundle.writestr(DB_MEMBER, db_bytes)
+            for rel, path in vault_files:
+                # vault files are already encrypted, so compressing them gains nothing
+                bundle.write(path, VAULT_PREFIX + rel, compress_type=zipfile.ZIP_STORED)
             bundle.writestr(MANIFEST_MEMBER, json.dumps(manifest, indent=2))
         payload = buffer.getvalue()
 
@@ -137,13 +164,14 @@ def create_backup(kind="manual", db_path=None):
     if kind == "auto":
         prune_auto_backups()
     log_event(AuditLog.Action.BACKUP, note=final.name)
-    logger.info("Backup created: %s", final.name)
+    logger.info("Backup created: %s (%d vault files)", final.name, len(vault_files))
     return {
         "name": final.name,
         "path": final,
         "size": final.stat().st_size,
         "encrypted": fernet is not None,
         "copied": copied,
+        "vault_files": len(vault_files),
     }
 
 
@@ -202,6 +230,11 @@ def resolve_backup_path(name):
 
 
 def _extract(path, tmp_dir):
+    """Decrypt and unpack a backup into tmp_dir, checking every checksum.
+
+    Returns (database path, manifest, folder holding the unpacked vault files).
+    Backups from Phase 2 (no vault section) are still accepted.
+    """
     raw = path.read_bytes()
     if path.name.endswith(".enc"):
         fernet = _fernet()
@@ -215,26 +248,44 @@ def _extract(path, tmp_dir):
             raise BackupError(
                 "Could not decrypt this backup. The key is wrong or the file is damaged."
             ) from exc
+
+    tmp_dir = Path(tmp_dir)
+    vault_root = tmp_dir / "vault"
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as bundle:
-            if set(bundle.namelist()) != {DB_MEMBER, MANIFEST_MEMBER}:
+            names = set(bundle.namelist())
+            vault_names = {name for name in names if name.startswith(VAULT_PREFIX)}
+            if (names - vault_names) != {DB_MEMBER, MANIFEST_MEMBER}:
                 raise BackupError("The backup contains unexpected files.")
             manifest = json.loads(bundle.read(MANIFEST_MEMBER))
+            expected = manifest.get("vault", {})
+            if {VAULT_PREFIX + rel for rel in expected} != vault_names:
+                raise BackupError("The vault files in the backup do not match its manifest.")
             db_bytes = bundle.read(DB_MEMBER)
+            if _sha256_bytes(db_bytes) != manifest.get("db_sha256"):
+                raise BackupError("The backup failed its checksum test. It may be damaged.")
+            for rel, checksum in expected.items():
+                if not VAULT_FILE_RE.match(rel):
+                    raise BackupError("The backup contains an invalid vault file name.")
+                data = bundle.read(VAULT_PREFIX + rel)
+                if _sha256_bytes(data) != checksum:
+                    raise BackupError("A vault file in the backup failed its checksum test.")
+                target = vault_root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
     except (zipfile.BadZipFile, ValueError) as exc:
         raise BackupError("The backup file is damaged.") from exc
-    if _sha256_bytes(db_bytes) != manifest.get("db_sha256"):
-        raise BackupError("The backup failed its checksum test. It may be damaged.")
-    db_path = Path(tmp_dir) / DB_MEMBER
+
+    db_path = tmp_dir / DB_MEMBER
     db_path.write_bytes(db_bytes)
-    return db_path, manifest
+    return db_path, manifest, vault_root
 
 
 def verify_backup(name):
-    """Open the backup completely (decrypt, unzip, checksum, database check)."""
+    """Open the backup completely (decrypt, unzip, checksums, database check)."""
     path = resolve_backup_path(name)
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
-        db_path, manifest = _extract(path, tmp)
+        db_path, manifest, _vault_root = _extract(path, tmp)
         integrity, tables, users = _inspect_database(db_path)
     if integrity != "ok":
         raise BackupError("The database inside this backup is damaged.")
@@ -244,21 +295,35 @@ def verify_backup(name):
         "users": users,
         "kind": manifest.get("kind", ""),
         "encrypted": path.name.endswith(".enc"),
+        "vault_files": len(manifest.get("vault", {})),
     }
 
 
 def restore_backup(name, db_path=None, run_migrate=True):
-    """Replace the live database with a verified backup (safety backup first)."""
+    """Replace the live database with a verified backup and bring back its vault files.
+
+    A safety backup is made first. Vault files are only added or overwritten,
+    never deleted, so nothing is lost by a restore.
+    """
     path = resolve_backup_path(name)
     target = _live_db_path(db_path)
     safety_name = None
+    restored_files = 0
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
-        verified_db, _manifest = _extract(path, tmp)
+        verified_db, _manifest, vault_root = _extract(path, tmp)
         integrity, _tables, _users = _inspect_database(verified_db)
         if integrity != "ok":
             raise BackupError("The database inside this backup is damaged. Nothing was changed.")
         if target.exists():
             safety_name = create_backup(kind="pre-restore", db_path=target)["name"]
+
+        if vault_root.is_dir():
+            for source in vault_root.rglob("*.bin"):
+                destination = Path(settings.VAULT_DIR) / source.relative_to(vault_root)
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, destination)
+                restored_files += 1
+
         if db_path is None:
             connections.close_all()
         staged = target.with_name(target.name + ".restoring")
@@ -274,5 +339,9 @@ def restore_backup(name, db_path=None, run_migrate=True):
     if run_migrate:
         call_command("migrate", interactive=False, verbosity=0)
     log_event(AuditLog.Action.RESTORE, note=f"Restored from {path.name}")
-    logger.warning("Database restored from %s", path.name)
-    return {"restored_from": path.name, "safety_backup": safety_name}
+    logger.warning("Database restored from %s (%d vault files)", path.name, restored_files)
+    return {
+        "restored_from": path.name,
+        "safety_backup": safety_name,
+        "vault_files": restored_files,
+    }

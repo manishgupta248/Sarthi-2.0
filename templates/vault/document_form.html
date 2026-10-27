@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{% if is_upload %}Upload document{% else %}Edit document{% endif %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{% if is_upload %}Upload a document{% else %}Edit {{ document.title }}{% endif %}</h1>
+<div class="card sarthi-stat" style="max-width:640px;"><div class="card-body">
+  <form method="post" {% if is_upload %}enctype="multipart/form-data"{% endif %}>{% csrf_token %}
+    {% include "core/_form.html" %}
+    <button class="btn btn-primary" type="submit">{% if is_upload %}Encrypt and store{% else %}Save{% endif %}</button>
+    <a class="btn btn-outline-secondary" href="{% url 'vault_list' %}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

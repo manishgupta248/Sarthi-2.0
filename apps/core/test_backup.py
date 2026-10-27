@@ -18,6 +18,7 @@ class BackupTests(TestCase):
         self.addCleanup(tmp.cleanup)
         root = Path(tmp.name)
         self.backup_dir = root / "backups"
+        self.vault_dir = root / "vault"
         self.db_file = root / "live.sqlite3"
         conn = sqlite3.connect(str(self.db_file))
         conn.execute("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, username TEXT)")
@@ -26,8 +27,8 @@ class BackupTests(TestCase):
         conn.close()
         self.key = Fernet.generate_key().decode()
         override = override_settings(
-            BACKUP_DIR=self.backup_dir, BACKUP_ENCRYPTION_KEY=self.key,
-            BACKUP_COPY_DIR="", BACKUP_KEEP_AUTO=2,
+            BACKUP_DIR=self.backup_dir, VAULT_DIR=self.vault_dir,
+            BACKUP_ENCRYPTION_KEY=self.key, BACKUP_COPY_DIR="", BACKUP_KEEP_AUTO=2,
         )
         override.enable()
         self.addCleanup(override.disable)
@@ -44,6 +45,7 @@ class BackupTests(TestCase):
         self.assertTrue(result["name"].endswith(".zip.enc"))
         info = verify_backup(result["name"])
         self.assertEqual(info["users"], 1)
+        self.assertEqual(info["vault_files"], 0)
         self.assertNotIn(b"alice", (self.backup_dir / result["name"]).read_bytes())
 
     def test_wrong_key_is_rejected(self):
@@ -68,6 +70,17 @@ class BackupTests(TestCase):
         restore_backup(result["name"], db_path=self.db_file, run_migrate=False)
         self.assertEqual(self._count_users(), 1)
         self.assertTrue(any(item["kind"] == "pre-restore" for item in list_backups()))
+
+    def test_vault_files_are_backed_up_and_restored(self):
+        vault_file = self.vault_dir / "ab" / ("c" * 32 + ".bin")
+        vault_file.parent.mkdir(parents=True)
+        vault_file.write_bytes(b"already-encrypted-bytes")
+        result = create_backup("manual", db_path=self.db_file)
+        self.assertEqual(result["vault_files"], 1)
+        self.assertEqual(verify_backup(result["name"])["vault_files"], 1)
+        vault_file.unlink()
+        restore_backup(result["name"], db_path=self.db_file, run_migrate=False)
+        self.assertEqual(vault_file.read_bytes(), b"already-encrypted-bytes")
 
     def test_path_tricks_are_rejected(self):
         with self.assertRaises(RecordNotFound):
