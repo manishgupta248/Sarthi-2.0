@@ -35,3 +35,9 @@ apps/ (pluggable apps), config/ (Django settings), templates/, static/, data/, b
 
 ## Starting a new chat
 Paste AGENTS.md and CURRENT_STATE.md, then say which phase or step you are on.
+
+## Daily commands (run from D:\Sarthi with .venv active)
+- Start the app: python manage.py runserver
+- Run tests: python manage.py test
+- Phase smoke test: .\scripts\smoke_phase1.ps1
+- Work on branch develop. Merge into main only after the smoke test passes.
