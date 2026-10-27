@@ -68,3 +68,25 @@
 
 ### Sessions
 - Sign-out after SESSION_IDLE_MINUTES (default 30) of inactivity.
+
+## Phase 4A additions (apps/wealth)
+
+### Models
+- Institution, AccountType (editable list, seeded by migration, edit in the admin site), Account, BalanceSnapshot. All inherit BaseModel (soft delete and audit trail).
+- Account: holder, joint holders and nominee are Person records (apps/family). Account number, customer ID and remarks are encrypted. Only the last 4 characters of the number are kept readable (account_number_last4) for masked display and search. Documents link through a ManyToManyField to vault.Document.
+- BalanceSnapshot: one active snapshot per account per day (database rule). Amounts are Decimal (INR).
+
+### Rules
+- Numbers are shown masked everywhere. The only way to see a full number is the Reveal button (POST, staff only, audited, hides after 30 seconds). Edit pages never show stored numbers.
+- Audit log stores field names only. Account __str__ and nickname must never contain numbers.
+- A joint account is counted once, under the main holder. Closed accounts are left out of today's totals but included in the history chart up to their closing date.
+- A balance older than 90 days (STALE_DAYS in services.py) appears in "Needs attention".
+- Wealth totals live in apps/wealth/services.py (wealth_summary, monthly_trend).
+
+### Excel export
+- apps/wealth/export.py builds one sheet with all accounts and a total. Masked by default; "full details" option is audited. Text that starts like a formula is neutralised. The file is not encrypted: delete it after use.
+
+### Plug-in dashboard and menu
+- Apps call register_menu and register_dashboard_widget (apps/core/navigation.py) in AppConfig.ready(). The home dashboard shows registered widget cards; a failing widget is logged and skipped.
+- Template filters: inr (Indian money format) and mask_last4 in apps/core/templatetags/sarthi_extras.py.
+- Charts use Chart.js stored locally in static/vendor/chartjs/.

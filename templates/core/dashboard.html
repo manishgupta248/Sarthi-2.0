@@ -32,10 +32,16 @@
   {% endif %}
 </div>
 
+{% if widgets %}
+<div class="row g-3 mb-4">
+  {% for w in widgets %}<div class="col-lg-6">{% include w.template with data=w.data %}</div>{% endfor %}
+</div>
+{% endif %}
+
 <div class="row g-3">
   <div class="col-lg-7"><div class="card sarthi-stat h-100"><div class="card-body">
     <h2 class="h6">Your apps</h2>
-    <p class="text-secondary mb-0">No apps are installed yet. The first one (Tasks and Reminders) comes in Phase 3, and it will appear in the left menu automatically.</p>
+    <p class="text-secondary mb-0">Installed apps appear in the left menu automatically. Records, Wealth and System sections are available to administrators.</p>
   </div></div></div>
 
   {% if user.is_staff %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load sarthi_extras %}
+{% block title %}Update balances{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Update balances</h1>
+<p class="text-secondary">Enter today's balance for each account. Leave an account blank to skip it. Commas are fine.</p>
+<form method="post">{% csrf_token %}
+  <div class="mb-3" style="max-width:260px;"><label class="form-label" for="as_of">Balance as of</label>
+    <input class="form-control" type="date" id="as_of" name="as_of" value="{{ as_of }}"></div>
+  <div class="card sarthi-stat mb-3"><div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Account</th><th>Holder</th><th class="text-end">Last recorded</th><th style="width:220px;">New balance (INR)</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.account.display_name }}<div class="small text-secondary">{{ row.account.account_type.name }} &middot; {{ row.account.account_number_last4|mask_last4 }}</div></td>
+      <td>{{ row.account.holder.full_name }}</td>
+      <td class="text-end">{% if row.latest %}{{ row.latest.amount|inr }}<div class="small text-secondary">{{ row.latest.as_of|date:"d-m-Y" }}</div>{% else %}-{% endif %}</td>
+      <td><input class="form-control" type="text" inputmode="decimal" autocomplete="off" name="amount_{{ row.account.pk }}" value="{{ row.entered }}"></td>
+    </tr>
+    {% empty %}<tr><td colspan="4" class="text-secondary p-4">No open accounts yet.</td></tr>{% endfor %}
+    </tbody></table></div></div>
+  <button class="btn btn-primary" type="submit">Save balances</button>
+  <a class="btn btn-outline-secondary" href="{% url 'wealth_dashboard' %}">Cancel</a>
+</form>
+{% endblock %}

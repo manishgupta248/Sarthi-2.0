@@ -13,6 +13,7 @@ urlpatterns = [
     path("system/audit/", core_views.audit_page, name="audit"),
     path("family/", include("apps.family.urls")),
     path("vault/", include("apps.vault.urls")),
+    path("wealth/", include("apps.wealth.urls")),
     path("health/", core_views.health, name="health"),
     path("admin/", admin.site.urls),
 ]

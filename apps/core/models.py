@@ -54,6 +54,7 @@ class AuditLog(models.Model):
         RESTORE = "restore", "Backup restored"
         DOWNLOAD = "download", "Document downloaded"
         REVEAL = "reveal", "Value revealed"
+        EXPORT = "export", "Data exported"
         OTHER = "other", "Other"
 
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
@@ -81,4 +82,5 @@ class AuditLog(models.Model):
         if self.pk is not None and not self._state.adding:
             raise PermissionError("Audit log entries cannot be changed.")
         super().save(*args, **kwargs)
+
 

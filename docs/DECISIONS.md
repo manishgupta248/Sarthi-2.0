@@ -25,3 +25,10 @@
 - 27-10-2026: Delete means archive (soft delete); administrators restore via the admin site.
 - 27-10-2026: Idle sign-out after 30 minutes (rolling session).
 - 27-10-2026: Never store passwords, PINs, CVV, OTPs or full card numbers anywhere in Sarthi.
+- 27-10-2026: Wealth v1 split into 4A (accounts, snapshots, dashboard, Excel export) and 4B (transactions, reconciliation).
+- 27-10-2026: Account types are an editable table seeded with Savings, Salary, PPF, NPS, Sukanya Samriddhi, DMAT, Cash or Wallet, Other.
+- 27-10-2026: Joint accounts counted once under the main holder; closed accounts excluded from totals.
+- 27-10-2026: Edit pages never display stored numbers; full numbers only via the audited Reveal button (30 seconds).
+- 27-10-2026: Excel export is masked by default; full export needs explicit confirmation and is audited; no import for now.
+- 27-10-2026: Balance older than 90 days is flagged for update.
+- 27-10-2026: Dashboard widget registry added so apps add home-page cards without editing the core.

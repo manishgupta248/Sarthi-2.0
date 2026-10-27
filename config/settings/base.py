@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.family",
     "apps.vault",
+    "apps.wealth",
 ]
 
 MIDDLEWARE = [
@@ -190,3 +191,4 @@ VAULT_MAX_UPLOAD_MB = env.int("VAULT_MAX_UPLOAD_MB", default=10)
 SESSION_IDLE_MINUTES = env.int("SESSION_IDLE_MINUTES", default=30)
 SESSION_COOKIE_AGE = SESSION_IDLE_MINUTES * 60
 SESSION_SAVE_EVERY_REQUEST = True
+

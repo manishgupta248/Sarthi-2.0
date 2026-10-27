@@ -55,3 +55,9 @@ Paste AGENTS.md and CURRENT_STATE.md, then say which phase or step you are on.
 - NEVER store passwords, PINs, CVV, OTPs or full card numbers.
 - Keep a copy of .env (SECRET_KEY, BACKUP_ENCRYPTION_KEY, FIELD_ENCRYPTION_KEY) outside the PC.
 - Phase smoke test: .\scripts\smoke_phase3.ps1
+
+## Phase 4A rules
+- Wealth code lives in apps/wealth. Money is Decimal in INR; show it with the inr template filter.
+- Never display a stored account number or customer ID except through the audited Reveal view.
+- To add a card to the home dashboard, call register_dashboard_widget in AppConfig.ready().
+- Phase smoke test: .\scripts\smoke_phase4a.ps1

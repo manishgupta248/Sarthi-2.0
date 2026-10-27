@@ -3,28 +3,24 @@
 Last updated: 27-10-2026
 
 ## Phase status
-- Phase 0 (setup, Git, documents): done
-- Phase 1 (core): done
-- Phase 2 (dashboard shell, audit trail, backup and restore): done
-- Phase 3 (family and vault foundation): done when the Phase 3 smoke test passes and main is updated
-- Phase 4 (Wealth v1: accounts, snapshots, transactions, dashboard): not started
+- Phases 0 to 3: done
+- Phase 4A (accounts, balance snapshots, wealth dashboard, Excel export): done when the Phase 4A smoke test passes and main is updated
+- Phase 4B (major transactions, reconciliation, needs-attention extras): not started
 
 ## What exists
-- Everything from Phases 1 and 2
-- Family app (people records) and Document vault (encrypted files: PDF, JPG, PNG, docx, xlsx)
-- EncryptedTextField for sensitive text; FIELD_ENCRYPTION_KEY in .env
-- Backups include vault files (zip format 2); restore drill with files passed
-- 30-minute idle sign-out
-- Soft delete and audit trail now exercised by a real model (Person, Document)
+- Everything from Phases 1 to 3 (core, dashboard shell, audit, encrypted backups with vault files, family, encrypted vault)
+- Wealth app: institutions, accounts (encrypted number and customer ID, masked display, audited Reveal, joint holders, nominee, linked vault documents), balance snapshots, Update balances page, wealth dashboard with charts and needs-attention list, home dashboard Wealth card, masked Excel export
+- Account types editable in the admin site (8 defaults loaded)
+- Dashboard widget registry and Indian money format
 
 ## Next
-Phase 4: Wealth v1 (institutions, accounts with encrypted numbers and masked display with audited reveal, balance snapshots, major transactions with reconciliation, wealth dashboard with charts). Accounts link to documents and nominee from the Person list.
+Phase 4B: major transactions per account, calculated balance versus reported balance (reconciliation), categories as an editable list, extra attention items. Then Phase 5 (FDs, bonds, insurance, loans given, liabilities, net worth).
 
 ## Known issues and open items
 - No login lockout after repeated wrong passwords. Add django-axes before Sarthi is reachable from anywhere except this PC.
-- Production run method (serving static files when DEBUG is off, for example WhiteNoise plus Waitress) is not set up yet.
-- SQLite WAL mode not enabled yet.
+- Production run method (static files when DEBUG is off, for example WhiteNoise plus Waitress) is not set up yet.
+- Archiving a person does not archive or block their accounts (to be guarded in a later phase).
+- Charts keep the colours of the theme they were loaded with; reload the page after switching light/dark mode.
+- Excel exports are not encrypted; delete them after use.
 - Backups are built in memory; vault limit about 700 MB before a redesign is needed.
-- Uploads larger than the limit are rejected only after Django has received them (single-user PC, low risk).
-- Windows may print a harmless warning when a log file rotates while the dev server auto-reloads.
-- Dashboard has no widgets from other apps yet; a widget registry will be added with the wealth dashboard.
+- SQLite WAL mode not enabled yet.

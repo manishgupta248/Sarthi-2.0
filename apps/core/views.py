@@ -14,6 +14,7 @@ from django.utils import timezone
 from .backup import create_backup, list_backups, verify_backup
 from .exceptions import AccessDenied, SarthiError
 from .models import AuditLog
+from .navigation import collect_dashboard_widgets
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ def dashboard(request):
             ).count(),
             "recent_events": AuditLog.objects.all()[:6],
         })
+    context["widgets"] = collect_dashboard_widgets(request)
     return render(request, "core/dashboard.html", context)
 
 
@@ -113,3 +115,4 @@ def audit_page(request):
         "actions": AuditLog.Action.choices,
         "selected_action": selected,
     })
+
