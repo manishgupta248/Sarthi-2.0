@@ -39,19 +39,21 @@ def build_accounts_workbook(include_sensitive):
     latest = latest_snapshot_map()
     accounts = Account.objects.select_related(
         "holder", "account_type", "institution", "nominee"
-    ).prefetch_related("joint_holders", "documents")
+    ).prefetch_related("joint_holders", "documents", "remark_entries")
     total = ZERO
     for account in accounts:
         snapshot = latest.get(account.pk)
         amount = snapshot.amount if snapshot else None
         if amount is not None and not account.is_closed:
             total += amount
+        remark_texts = [entry.text for entry in account.remark_entries.all()]
         if include_sensitive:
-            number, customer, remarks = account.account_number, account.customer_id, account.remarks
+            number, customer = account.account_number, account.customer_id
+            remarks = " | ".join(remark_texts)
         else:
             number = ("XXXXXX" + account.account_number_last4) if account.account_number_last4 else ""
             customer = "(hidden)" if account.customer_id else ""
-            remarks = "(hidden)" if account.remarks else ""
+            remarks = "(hidden)" if remark_texts else ""
         sheet.append([
             _safe(account.holder.full_name),
             _safe(", ".join(person.full_name for person in account.joint_holders.all())),

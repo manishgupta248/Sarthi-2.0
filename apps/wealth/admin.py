@@ -30,3 +30,13 @@ class AccountAdmin(AllRecordsAdminMixin, admin.ModelAdmin):
 class BalanceSnapshotAdmin(AllRecordsAdminMixin, admin.ModelAdmin):
     list_display = ("account", "as_of", "amount", "is_deleted")
     list_filter = ("is_deleted",)
+
+
+from .models import AccountRemark  # noqa: E402
+
+
+@admin.register(AccountRemark)
+class AccountRemarkAdmin(AllRecordsAdminMixin, admin.ModelAdmin):
+    list_display = ("__str__", "created_at", "is_deleted")
+    list_filter = ("is_deleted",)
+    exclude = ("text",)  # remarks are read on the account page

@@ -90,3 +90,8 @@
 - Apps call register_menu and register_dashboard_widget (apps/core/navigation.py) in AppConfig.ready(). The home dashboard shows registered widget cards; a failing widget is logged and skipped.
 - Template filters: inr (Indian money format) and mask_last4 in apps/core/templatetags/sarthi_extras.py.
 - Charts use Chart.js stored locally in static/vendor/chartjs/.
+
+## Phase 4A-2 changes (account form)
+- Joint holder is one dropdown on the form (the database table can still hold several). Saving keeps exactly the chosen one.
+- Remarks are separate encrypted entries (AccountRemark), added one by one on the account page. The add form has an optional first remark. The former single Account.remarks field was copied into entries and removed (migrations 0003 to 0005).
+- Documents are uploaded from the account page through apps/vault/services.py (store_document), the same checked and encrypted path the Vault page uses. They are linked to the account and filed under the holder. Unlink removes only the link.

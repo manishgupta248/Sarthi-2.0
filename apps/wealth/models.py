@@ -65,7 +65,7 @@ class Account(BaseModel):
     opening_date = models.DateField(null=True, blank=True)
     is_closed = models.BooleanField(default=False)
     closed_on = models.DateField(null=True, blank=True)
-    remarks = EncryptedTextField(blank=True)
+    # remarks now live in AccountRemark (one entry per remark)
     documents = models.ManyToManyField("vault.Document", blank=True, related_name="accounts")
 
     class Meta:
@@ -107,3 +107,17 @@ class BalanceSnapshot(BaseModel):
 
     def __str__(self):
         return f"{self.account.display_name} on {self.as_of}"
+
+
+class AccountRemark(BaseModel):
+    """One remark about an account. Add as many as needed; each is stored encrypted."""
+
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="remark_entries")
+    text = EncryptedTextField()
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"Remark on {self.account.display_name}"
+

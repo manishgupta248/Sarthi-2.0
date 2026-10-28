@@ -1,13 +1,10 @@
 import hashlib
 import io
 from datetime import date, timedelta
-from pathlib import Path
 
 from django.contrib import messages
-from django.core.exceptions import SuspiciousFileOperation
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_POST
 
 from apps.core.audit import log_event
@@ -18,18 +15,11 @@ from apps.family.models import Person
 
 from .forms import DocumentEditForm, UploadForm
 from .models import Document
-from .storage import VaultError, read_decrypted, save_encrypted
-from .validators import check_upload
+from .services import store_document
+from .storage import VaultError, read_decrypted
 
 INLINE_TYPES = {"application/pdf", "image/jpeg", "image/png"}
 EXPIRY_WARNING_DAYS = 60
-
-
-def _clean_name(raw):
-    try:
-        return get_valid_filename(Path(raw).name)[:200]
-    except SuspiciousFileOperation:
-        return "document"
 
 
 @staff_required
@@ -70,28 +60,19 @@ def document_list(request):
 def document_upload(request):
     form = UploadForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        upload = form.cleaned_data["file"]
         try:
-            data = upload.read()
-            content_type = check_upload(upload.name, data)
-            stored_path = save_encrypted(data)
-        except SarthiError as exc:
-            form.add_error("file", exc.message)
-        else:
-            original = _clean_name(upload.name) or "document"
-            document = Document.objects.create(
-                title=form.cleaned_data["title"] or Path(original).stem[:200] or "Document",
+            document = store_document(
+                form.cleaned_data["file"],
+                title=form.cleaned_data["title"],
                 doc_type=form.cleaned_data["doc_type"],
                 person=form.cleaned_data["person"],
                 notes=form.cleaned_data["notes"],
                 expiry_date=form.cleaned_data["expiry_date"],
-                original_name=original,
-                content_type=content_type,
-                size_bytes=len(data),
-                sha256=hashlib.sha256(data).hexdigest(),
-                stored_path=stored_path,
-                uploaded_by=request.user,
+                user=request.user,
             )
+        except SarthiError as exc:
+            form.add_error("file", exc.message)
+        else:
             messages.success(request, f"Stored and encrypted: {document.title}")
             return redirect("vault_list")
     return render(request, "vault/document_form.html", {"form": form, "is_upload": True})

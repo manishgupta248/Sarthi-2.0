@@ -19,7 +19,7 @@ from apps.core.views import staff_required
 from apps.family.models import Person
 
 from .export import build_accounts_workbook
-from .forms import AccountForm, InstitutionForm, SnapshotForm
+from .forms import AccountDocumentForm, AccountForm, InstitutionForm, RemarkForm, SnapshotForm
 from .models import Account, AccountType, BalanceSnapshot, Institution
 from .services import latest_snapshot_map, monthly_trend, wealth_summary
 
@@ -109,6 +109,9 @@ def account_detail(request, pk):
         "snapshot_form": SnapshotForm(account, initial={"as_of": date.today()}),
         "joint_holders": account.joint_holders.all(),
         "documents": account.documents.all(),
+        "remarks": account.remark_entries.all(),
+        "remark_form": RemarkForm(),
+        "document_form": AccountDocumentForm(),
     })
 
 
@@ -307,3 +310,4 @@ def export_accounts(request):
         response["Cache-Control"] = "private, no-store"
         return response
     return render(request, "wealth/export.html")
+

@@ -32,3 +32,6 @@
 - 27-10-2026: Excel export is masked by default; full export needs explicit confirmation and is audited; no import for now.
 - 27-10-2026: Balance older than 90 days is flagged for update.
 - 27-10-2026: Dashboard widget registry added so apps add home-page cards without editing the core.
+- 27-10-2026: One joint holder per account on the screen (single dropdown, deselectable).
+- 27-10-2026: Remarks are separate dated encrypted entries instead of one text box.
+- 27-10-2026: Documents are uploaded from the account page (one by one) through the shared vault function; the long pick-list was removed.

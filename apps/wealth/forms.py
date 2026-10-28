@@ -5,8 +5,10 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from apps.core.forms import BootstrapFormMixin
+from apps.family.models import Person
+from apps.vault.models import Document
 
-from .models import Account, BalanceSnapshot, Institution
+from .models import Account, AccountRemark, BalanceSnapshot, Institution
 
 IFSC_RE = re.compile(r"^[A-Z]{4}0[A-Z0-9]{6}$")
 
@@ -27,6 +29,11 @@ class InstitutionForm(BootstrapFormMixin, forms.ModelForm):
 
 
 class AccountForm(BootstrapFormMixin, forms.ModelForm):
+    # One joint holder at most. Choose "- None -" to remove it.
+    joint_holder = forms.ModelChoiceField(
+        queryset=Person.objects.all(), required=False, empty_label="- None -",
+        label="Joint holder",
+    )
     # The stored number is never shown again here. Leave blank to keep it.
     new_account_number = forms.CharField(
         required=False, label="Account number",
@@ -36,31 +43,30 @@ class AccountForm(BootstrapFormMixin, forms.ModelForm):
         required=False, label="Customer ID",
         widget=forms.TextInput(attrs={"autocomplete": "off"}),
     )
+    first_remark = forms.CharField(
+        required=False, label="Remark (optional)",
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="More remarks and documents can be added on the account page after saving.",
+    )
 
     field_order = [
-        "holder", "joint_holders", "nominee", "account_type", "institution", "nickname",
+        "holder", "joint_holder", "nominee", "account_type", "institution", "nickname",
         "new_account_number", "ifsc_code", "new_customer_id", "branch",
-        "opening_date", "is_closed", "closed_on", "remarks", "documents",
+        "opening_date", "is_closed", "closed_on", "first_remark",
     ]
 
     class Meta:
         model = Account
         fields = [
-            "holder", "joint_holders", "nominee", "account_type", "institution", "nickname",
-            "ifsc_code", "branch", "opening_date", "is_closed", "closed_on", "remarks", "documents",
+            "holder", "nominee", "account_type", "institution", "nickname",
+            "ifsc_code", "branch", "opening_date", "is_closed", "closed_on",
         ]
         widgets = {
-            "joint_holders": forms.SelectMultiple(attrs={"size": 4}),
-            "documents": forms.SelectMultiple(attrs={"size": 5}),
             "opening_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "closed_on": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "remarks": forms.Textarea(attrs={"rows": 3}),
         }
         help_texts = {
             "nickname": "Optional, for example: SBI salary account. Never put account numbers here.",
-            "joint_holders": "Hold Ctrl to select several. Leave empty if none.",
-            "documents": "Documents from the vault. Hold Ctrl to select several.",
-            "remarks": "Stored encrypted.",
             "ifsc_code": "11 characters, for example SBIN0001234.",
         }
 
@@ -70,6 +76,15 @@ class AccountForm(BootstrapFormMixin, forms.ModelForm):
             keep = "Leave blank to keep the current value"
             self.fields["new_account_number"].widget.attrs["placeholder"] = keep
             self.fields["new_customer_id"].widget.attrs["placeholder"] = keep
+            joint = list(self.instance.joint_holders.all())
+            if joint:
+                self.initial["joint_holder"] = joint[0].pk
+            if len(joint) > 1:
+                self.fields["joint_holder"].help_text = (
+                    f"This account had {len(joint)} joint holders. "
+                    "Saving keeps only the one chosen here."
+                )
+            del self.fields["first_remark"]
 
     def clean_ifsc_code(self):
         value = self.cleaned_data["ifsc_code"].strip().upper()
@@ -86,8 +101,9 @@ class AccountForm(BootstrapFormMixin, forms.ModelForm):
     def clean(self):
         data = super().clean()
         holder = data.get("holder")
-        if holder and holder in data.get("joint_holders", []):
-            self.add_error("joint_holders", "The main holder should not be listed again as a joint holder.")
+        joint = data.get("joint_holder")
+        if holder and joint and holder == joint:
+            self.add_error("joint_holder", "The main holder cannot also be the joint holder.")
         if data.get("closed_on") and not data.get("is_closed"):
             self.add_error("closed_on", "Tick Closed if you enter a closing date.")
         return data
@@ -100,10 +116,47 @@ class AccountForm(BootstrapFormMixin, forms.ModelForm):
             account.account_number = number
         if customer:
             account.customer_id = customer
+
+        original_save_m2m = self.save_m2m
+
+        def save_m2m():
+            original_save_m2m()
+            joint = self.cleaned_data.get("joint_holder")
+            account.joint_holders.set([joint] if joint else [])
+            remark = self.cleaned_data.get("first_remark", "").strip()
+            if remark:
+                AccountRemark.objects.create(account=account, text=remark)
+
+        self.save_m2m = save_m2m
         if commit:
             account.save()
             self.save_m2m()
         return account
+
+
+class RemarkForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = AccountRemark
+        fields = ["text"]
+        labels = {"text": "New remark"}
+        widgets = {"text": forms.Textarea(attrs={"rows": 2})}
+
+
+class AccountDocumentForm(BootstrapFormMixin, forms.Form):
+    file = forms.FileField(
+        help_text="PDF, JPG, PNG, Word (.docx) or Excel (.xlsx). Maximum 10 MB. Add documents one by one."
+    )
+    title = forms.CharField(
+        max_length=200, required=False,
+        help_text="Optional. Never type account numbers here.",
+    )
+    doc_type = forms.ChoiceField(
+        choices=Document.DocType.choices, initial=Document.DocType.BANK, label="Type"
+    )
+    expiry_date = forms.DateField(
+        required=False, widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Optional. Use for documents that expire.",
+    )
 
 
 class SnapshotForm(BootstrapFormMixin, forms.ModelForm):
