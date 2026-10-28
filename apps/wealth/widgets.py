@@ -1,10 +1,12 @@
-from .services import wealth_summary
+from .networth import holding_attention, net_worth_summary, upcoming_events
 
 
 def wealth_widget(request):
-    summary = wealth_summary()
+    summary = net_worth_summary()
+    attention = summary["bank"]["attention"] + holding_attention(summary["rows"])
     return {
-        "total": summary["total"],
-        "account_count": len(summary["rows"]),
-        "attention_count": len(summary["attention"]),
+        "net_worth": summary["net_worth"],
+        "assets": summary["assets_total"],
+        "liabilities": summary["liabilities_total"],
+        "attention_count": len(attention) + len(upcoming_events()),
     }

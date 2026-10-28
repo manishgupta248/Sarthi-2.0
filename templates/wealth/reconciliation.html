@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load sarthi_extras %}
+{% block title %}Balance check{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div><h1 class="h3 mb-0">Balance check</h1>
+    <div class="text-secondary">{{ account.display_name }} &middot; {{ account.holder.full_name }}
+      {% if account.full_tracking %}<span class="badge text-bg-info">Every transaction recorded</span>{% endif %}</div></div>
+  <a class="btn btn-outline-secondary" href="{% url 'account_detail' account.pk %}">Back to account</a>
+</div>
+
+<div class="card sarthi-stat mb-3"><div class="card-body small">
+  <p class="mb-1">Each recorded balance is a checkpoint (counted as of the end of that day). Between two checkpoints Sarthi checks:
+    <strong>earlier balance + money in - money out = later balance</strong>.</p>
+  <p class="mb-0 text-secondary">If you only record major transactions, a difference is normal (small spends, interest, charges). For accounts where you record every transaction, tick "Record every transaction" on the account to get warnings.</p>
+</div></div>
+
+{% if result.latest %}
+<div class="card sarthi-stat mb-3"><div class="card-body">
+  <div class="small text-secondary">Last recorded balance ({{ result.latest.as_of|date:"d-m-Y" }})</div>
+  <div class="fw-semibold">{{ result.latest.amount|inr }}</div>
+  {% if result.since_count %}<div class="small mt-2 text-secondary">{{ result.since_count }} transaction{{ result.since_count|pluralize }} since then. Estimated balance today:</div>
+  <div class="fs-5 fw-semibold">{{ result.estimated|inr }}</div>{% endif %}
+  {% if result.before_first_count %}<div class="small text-secondary mt-2">{{ result.before_first_count }} transaction{{ result.before_first_count|pluralize }} dated on or before the first recorded balance {{ result.before_first_count|pluralize:"is,are" }} treated as already included in it.</div>{% endif %}
+</div></div>
+{% else %}
+<div class="alert alert-info">No balance recorded yet. Record a balance first; it becomes the starting point.</div>
+{% endif %}
+
+<div class="card sarthi-stat"><div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>Period</th><th class="text-end">Start balance</th><th class="text-end">In</th><th class="text-end">Out</th><th class="text-end">Expected</th><th class="text-end">Recorded</th><th class="text-end">Difference</th></tr></thead>
+  <tbody>
+  {% for p in periods %}
+  <tr>
+    <td class="text-nowrap">{{ p.start.as_of|date:"d-m-Y" }} to {{ p.end.as_of|date:"d-m-Y" }}<div class="small text-secondary">{{ p.count }} transaction{{ p.count|pluralize }}</div></td>
+    <td class="text-end">{{ p.start.amount|inr }}</td>
+    <td class="text-end text-success">{{ p.money_in|inr }}</td>
+    <td class="text-end text-danger">{{ p.money_out|inr }}</td>
+    <td class="text-end">{{ p.expected|inr }}</td>
+    <td class="text-end">{{ p.end.amount|inr }}</td>
+    <td class="text-end">{% if p.matches %}<span class="badge text-bg-success">Matches</span>{% else %}<span class="badge text-bg-warning">{{ p.difference|inr }}</span>{% endif %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="7" class="text-secondary p-4">Record at least two balances to compare periods.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% endblock %}

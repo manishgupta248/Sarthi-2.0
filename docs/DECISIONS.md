@@ -35,3 +35,16 @@
 - 27-10-2026: One joint holder per account on the screen (single dropdown, deselectable).
 - 27-10-2026: Remarks are separate dated encrypted entries instead of one text box.
 - 27-10-2026: Documents are uploaded from the account page (one by one) through the shared vault function; the long pick-list was removed.
+- 27-10-2026: No separate opening balance: each recorded balance is a checkpoint and the first one is the starting point.
+- 27-10-2026: Mismatch warnings only for accounts marked "Record every transaction" (so partial recording does not create noise).
+- 27-10-2026: Transactions use positive amounts plus a direction; transfers between own accounts are entered in one step as two linked entries.
+- 27-10-2026: Transaction categories are an editable table seeded with 15 defaults.
+- 28-10-2026: Do not physically archive old transactions. Use period browsing (month/year buttons, archive overview) instead, so balance checks, totals and backups stay simple.
+- 28-10-2026: Categories get a group (income, expense, investment, transfer, loan, other) that decides how reports count them. Transfers are excluded. Refunds net off expenses.
+- 28-10-2026: Reports default to the Indian financial year (April to March) with a calendar-year switch.
+- 28-10-2026: Cash (ATM withdrawal) category counts as an expense by default.
+- 28-10-2026: Budgets, bulk re-categorise and duplicate detection are planned as Phase 4D after real use of the reports.
+- 28-10-2026: Phase 5 chosen before 4D. Investments, loans given and liabilities share one Holding model with a type-specific form, valued by recorded values first, then estimates (deposits) or original amount.
+- 28-10-2026: Net worth = bank balances + assets - liabilities. Loans (given or taken) are tracked by recording the outstanding amount, not by calculating interest.
+- 28-10-2026: Holdings have one multi-line encrypted remarks box (not separate entries like accounts).
+- 28-10-2026: Due dates and maturities are tracked now; notifications come with Phase 6 reminders.

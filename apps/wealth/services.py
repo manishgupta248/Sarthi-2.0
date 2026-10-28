@@ -25,7 +25,7 @@ def _shares(values, total):
     return items
 
 
-def wealth_summary(today=None):
+def _base_summary(today=None):
     """Totals over OPEN accounts, using each account's latest balance.
 
     A joint account is counted once, under its main holder.
@@ -104,3 +104,13 @@ def monthly_trend(months=12, today=None):
         labels.append(point.strftime("%b %Y"))
         values.append(float(total))
     return {"labels": labels, "values": values}
+
+
+
+def wealth_summary(today=None):
+    """Totals, shares and the needs-attention list (including balance-mismatch warnings)."""
+    from .reconciliation import mismatch_alerts
+
+    summary = _base_summary(today)
+    summary["attention"].extend(mismatch_alerts([row["account"] for row in summary["rows"]]))
+    return summary

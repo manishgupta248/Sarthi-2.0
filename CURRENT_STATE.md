@@ -1,26 +1,28 @@
 # CURRENT_STATE.md
 
-Last updated: 27-10-2026
+Last updated: 28-10-2026
 
 ## Phase status
 - Phases 0 to 3: done
-- Phase 4A (accounts, balance snapshots, wealth dashboard, Excel export): done when the Phase 4A smoke test passes and main is updated
-- Phase 4B (major transactions, reconciliation, needs-attention extras): not started
+- Phases 4A, 4A-2, 4B, 4C (accounts, balances, transactions, reports): done
+- Phase 5 (investments, liabilities, net worth): done when the Phase 5 smoke test passes and main is updated
+- Phase 4D (bulk re-categorise, budgets, duplicate detection): planned
+- Phase 6 (Tasks and Reminders): not started
 
 ## What exists
-- Everything from Phases 1 to 3 (core, dashboard shell, audit, encrypted backups with vault files, family, encrypted vault)
-- Wealth app: institutions, accounts (encrypted number and customer ID, masked display, audited Reveal, joint holders, nominee, linked vault documents), balance snapshots, Update balances page, wealth dashboard with charts and needs-attention list, home dashboard Wealth card, masked Excel export
-- Account types editable in the admin site (8 defaults loaded)
-- Dashboard widget registry and Indian money format
+- Everything from earlier phases
+- Holdings: fixed and recurring deposits, bonds, insurance, loans given, gold, property, other assets, and liabilities (loans, card dues), each with a type-specific form
+- Recorded values with estimates for deposits, Update values page, Net worth page with 12-month trend, upcoming due dates and maturities, attention list, Excel export, home dashboard net worth card
 
 ## Next
-Phase 4B: major transactions per account, calculated balance versus reported balance (reconciliation), categories as an editable list, extra attention items. Then Phase 5 (FDs, bonds, insurance, loans given, liabilities, net worth).
+Phase 6 (Tasks and Reminders, using the due dates, maturities, document expiries and stale values already tracked) or Phase 4D (bulk re-categorise, budgets, duplicate detection), as you prefer.
 
 ## Known issues and open items
 - No login lockout after repeated wrong passwords. Add django-axes before Sarthi is reachable from anywhere except this PC.
 - Production run method (static files when DEBUG is off, for example WhiteNoise plus Waitress) is not set up yet.
-- Archiving a person does not archive or block their accounts (to be guarded in a later phase).
-- Charts keep the colours of the theme they were loaded with; reload the page after switching light/dark mode.
+- Archiving a person does not archive or block their accounts and holdings (to be guarded in a later phase).
+- Deposit estimates are approximations (no TDS, penalties or bank-specific rules). Recorded values override them.
+- Charts keep the colours of the theme they were loaded with; reload after switching light/dark mode.
 - Excel exports are not encrypted; delete them after use.
 - Backups are built in memory; vault limit about 700 MB before a redesign is needed.
 - SQLite WAL mode not enabled yet.

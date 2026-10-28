@@ -95,3 +95,51 @@
 - Joint holder is one dropdown on the form (the database table can still hold several). Saving keeps exactly the chosen one.
 - Remarks are separate encrypted entries (AccountRemark), added one by one on the account page. The add form has an optional first remark. The former single Account.remarks field was copied into entries and removed (migrations 0003 to 0005).
 - Documents are uploaded from the account page through apps/vault/services.py (store_document), the same checked and encrypted path the Vault page uses. They are linked to the account and filed under the holder. Unlink removes only the link.
+
+## Phase 4B additions (transactions and balance checking)
+
+### Models
+- TransactionCategory (editable list, seeded, edit in the admin site) and Transaction (BaseModel): account, date, direction (in or out), positive amount, category, description, counterparty, reference (encrypted).
+- Account.full_tracking: tick for accounts where every transaction is recorded; enables mismatch warnings.
+
+### Balance check (apps/wealth/reconciliation.py)
+- Each recorded balance is a checkpoint, counted as of the END of its day. For consecutive checkpoints: earlier balance + money in - money out should equal the later balance. A difference under 1.00 counts as a match.
+- Transactions dated on or before the first recorded balance are treated as already included in it.
+- Estimated balance = last recorded balance + transactions after it. The wealth dashboard total still uses recorded balances only.
+- Mismatch warnings appear in "Needs attention" only for accounts with full_tracking.
+
+### Pages
+- /wealth/transactions/ (filters, totals, pagination), add/edit/archive, /wealth/transactions/transfer/ (creates the out and in entries together, category Transfer), /wealth/accounts/<id>/reconciliation/.
+- The audit log never contains amounts, descriptions or references.
+
+## Phase 4C additions (browsing and reports)
+
+### Browsing long transaction lists
+- Nothing is ever moved or deleted to keep lists short. The Transactions page opens on the current month, with Year and Month buttons, All time, a custom date range, and 50-per-page pagination. /wealth/transactions/archive/ lists every year and month with counts and totals.
+- Transaction has indexes on (account, date) and (date).
+
+### Category groups and reports (apps/wealth/reports.py)
+- Each TransactionCategory has a group: income, expense, investment, transfer, loan, other. Uncategorised transactions have no group.
+- Income = in minus out (income group). Expenses = out minus in (expense group; refunds reduce it). Invested = out minus in (investment group). Left over = income - expenses - invested. Savings rate = left over / income.
+- Transfers are left out. Loans, Other and uncategorised are shown separately ("Not classified") so nothing is hidden.
+- basis "fy" (default) = Indian financial year April to March, identified by the year it starts in (2026 = FY 2026-27). basis "calendar" = January to December.
+- Reports are plain functions returning data (monthly_summary, yearly_summary, category_breakdown, category_matrix, top_transactions) so other channels (Telegram, later) can reuse them.
+- Pages: /wealth/reports/ (month by month, year by year), /wealth/reports/categories/ (with previous-period comparison, month-by-month table and largest items), Excel report at /wealth/reports/export/ (audited, no account numbers, not encrypted).
+- Categories are managed at /wealth/categories/.
+
+## Phase 5 additions (investments, liabilities, net worth)
+
+### Model (apps/wealth/models.py)
+- Holding (BaseModel): one record type for fixed deposits, recurring deposits, bonds, insurance, loans given, gold, property, other assets AND liabilities (home, car, personal, education loans, credit card dues, other). The kind decides which fields the form shows (apps/wealth/forms_holdings.py: KIND_FIELDS, KIND_LABELS, REQUIRED). LIABILITY_KINDS marks the liabilities.
+- Policy, deposit and loan numbers are encrypted (identifier); only the last 4 characters are readable (identifier_last4). Revealing a number is audited.
+- HoldingValuation: 'on this date it was worth (or still owed) this amount'; one active entry per holding per day.
+- Documents link through ManyToMany to vault.Document and are uploaded with the same checked, encrypted function as accounts.
+
+### Valuation rules (apps/wealth/networth.py: holding_value)
+1. latest recorded value on or before the date ("recorded"); 2. fixed and recurring deposits: estimate from rate and dates ("estimated"; 365-day year, quarterly compounding by default, instalments compounded quarterly, no TDS or penalties); 3. bonds, loans given, gold, property, liabilities: original amount ("cost"); 4. otherwise none (for example insurance).
+- Net worth = bank balances + asset holdings - liabilities, per type and per person. Closed holdings drop out after their closing date. Joint holdings count once, under the main holder.
+- upcoming_events() lists maturities (60 days) and due dates (30 days) and flags overdue ones; holding_attention() flags missing and stale (over 180 days) values. Phase 6 reminders will reuse both.
+
+### Pages
+- /wealth/networth/, /wealth/investments/, /wealth/liabilities/, /wealth/holdings/add/<type>/, /wealth/holdings/<id>/, /wealth/values/update/, Excel export at /wealth/holdings/export/ (masked by default, audited, not encrypted).
+- The home dashboard card now shows net worth.

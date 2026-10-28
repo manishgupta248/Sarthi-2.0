@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static sarthi_extras %}
+{% block title %}{{ holding.display_name }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div><h1 class="h3 mb-0">{{ holding.display_name }}</h1>
+    <div class="text-secondary">{{ holding.get_kind_display }} &middot; {{ holding.holder.full_name }}{% if holding.status == "closed" %} &middot; <span class="badge text-bg-secondary">Closed</span>{% endif %}</div></div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'holding_edit' holding.pk %}"><i class="bi bi-pencil"></i> Edit</a>
+    <form method="post" action="{% url 'holding_delete' holding.pk %}" onsubmit="return confirm('Archive this record?');">{% csrf_token %}
+      <button class="btn btn-outline-danger" type="submit"><i class="bi bi-archive"></i> Archive</button></form>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card sarthi-stat mb-3"><div class="card-body">
+      <div class="text-secondary small">{% if holding.is_liability %}Amount owed{% else %}Current value{% endif %}</div>
+      <div class="fs-3 fw-semibold">{{ value.amount|inr }}</div>
+      <div class="small text-secondary">{% if value.source == "recorded" %}Recorded on {{ value.as_of|date:"d-m-Y" }}{% elif value.source == "estimated" %}Estimated from the interest rate and dates. Record a value to replace the estimate.{% elif value.source == "cost" %}Based on the original amount. Record a value when it changes.{% else %}No value recorded.{% endif %}</div>
+    </div></div>
+
+    <div class="card sarthi-stat mb-3"><div class="card-body">
+      <h2 class="h6">Details</h2>
+      <dl class="row mb-0 small">
+        {% if holding.institution %}<dt class="col-sm-4">{{ labels.institution }}</dt><dd class="col-sm-8">{{ holding.institution.name }}</dd>{% endif %}
+        {% if holding.counterparty %}<dt class="col-sm-4">{{ labels.counterparty }}</dt><dd class="col-sm-8">{{ holding.counterparty }}</dd>{% endif %}
+        {% if holding.identifier_last4 %}<dt class="col-sm-4">{{ labels.new_identifier }}</dt><dd class="col-sm-8">{{ holding.identifier_last4|mask_last4 }}</dd>{% endif %}
+        {% if holding.principal is not None %}<dt class="col-sm-4">{{ labels.principal }}</dt><dd class="col-sm-8">{{ holding.principal|inr }}</dd>{% endif %}
+        {% if holding.sum_assured is not None %}<dt class="col-sm-4">{{ labels.sum_assured }}</dt><dd class="col-sm-8">{{ holding.sum_assured|inr }}</dd>{% endif %}
+        {% if holding.installment_amount is not None %}<dt class="col-sm-4">{{ labels.installment_amount }}</dt><dd class="col-sm-8">{{ holding.installment_amount|inr }}{% if holding.installment_frequency %} ({{ holding.get_installment_frequency_display }}){% endif %}</dd>{% endif %}
+        {% if holding.interest_rate is not None %}<dt class="col-sm-4">{{ labels.interest_rate }}</dt><dd class="col-sm-8">{{ holding.interest_rate }}%{% if holding.kind == "fixed_deposit" %} ({{ holding.get_compounding_display }}; {{ holding.get_interest_payout_display }}){% endif %}</dd>{% endif %}
+        {% if holding.start_date %}<dt class="col-sm-4">{{ labels.start_date }}</dt><dd class="col-sm-8">{{ holding.start_date|date:"d-m-Y" }}</dd>{% endif %}
+        {% if holding.end_date %}<dt class="col-sm-4">{{ labels.end_date }}</dt><dd class="col-sm-8">{{ holding.end_date|date:"d-m-Y" }}</dd>{% endif %}
+        {% if holding.maturity_value is not None %}<dt class="col-sm-4">{{ labels.maturity_value }}</dt><dd class="col-sm-8">{{ holding.maturity_value|inr }}</dd>{% endif %}
+        {% if holding.next_due_date %}<dt class="col-sm-4">{{ labels.next_due_date }}</dt><dd class="col-sm-8">{{ holding.next_due_date|date:"d-m-Y" }}
+          {% if can_advance %}<form method="post" action="{% url 'holding_advance' holding.pk %}" class="d-inline ms-2">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary py-0" type="submit">Mark paid: move to next date</button></form>{% endif %}</dd>{% endif %}
+        {% if holding.joint_holder %}<dt class="col-sm-4">Joint holder</dt><dd class="col-sm-8">{{ holding.joint_holder.full_name }}</dd>{% endif %}
+        {% if holding.nominee %}<dt class="col-sm-4">Nominee</dt><dd class="col-sm-8">{{ holding.nominee.full_name }}</dd>{% endif %}
+        {% if holding.status == "closed" %}<dt class="col-sm-4">Closed on</dt><dd class="col-sm-8">{{ holding.closed_on|date:"d-m-Y"|default:"-" }}</dd>{% endif %}
+        {% if holding.remarks %}<dt class="col-sm-4">Remarks</dt><dd class="col-sm-8">{{ holding.remarks|linebreaksbr }}</dd>{% endif %}
+      </dl>
+      {% if holding.identifier_last4 %}
+      <hr>
+      <button class="btn btn-sm btn-outline-primary" id="reveal-button" type="button"
+              data-url="{% url 'holding_reveal' holding.pk %}" data-csrf="{{ csrf_token }}"><i class="bi bi-eye"></i> Reveal number (30 seconds)</button>
+      <div class="alert alert-warning mt-3 mb-0 d-none" id="reveal-box">
+        <div>Number: <strong id="reveal-account"></strong><span id="reveal-customer" class="d-none"></span></div>
+        <div class="small text-secondary mt-1">Hides automatically. This reveal was recorded in the audit log.</div>
+      </div>
+      {% endif %}
+    </div></div>
+
+    <div class="card sarthi-stat"><div class="card-body">
+      <h2 class="h6">Documents</h2>
+      {% for d in documents %}
+      <div class="small py-2 border-bottom d-flex justify-content-between align-items-center gap-2">
+        <div><i class="bi bi-file-earmark-lock"></i> {{ d.title }}{% if d.expiry_date %} <span class="text-secondary">(expires {{ d.expiry_date|date:"d-m-Y" }})</span>{% endif %}</div>
+        <div class="text-nowrap">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'vault_download' d.pk %}" target="_blank">Open</a>
+          <form method="post" action="{% url 'holding_document_unlink' holding.pk d.pk %}" class="d-inline" onsubmit="return confirm('Unlink this document? It stays in the vault.');">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-secondary" type="submit">Unlink</button></form>
+        </div>
+      </div>
+      {% empty %}<p class="text-secondary small">No documents yet.</p>{% endfor %}
+      <form method="post" enctype="multipart/form-data" action="{% url 'holding_document_upload' holding.pk %}" class="mt-3">{% csrf_token %}
+        <div class="small fw-semibold mb-2">Upload a document</div>
+        {% include "core/_form.html" with form=document_form %}
+        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-cloud-arrow-up"></i> Encrypt, store and link</button>
+      </form>
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card sarthi-stat mb-3"><div class="card-body">
+      <h2 class="h6">Record a value</h2>
+      <form method="post" action="{% url 'valuation_add' holding.pk %}">{% csrf_token %}
+        {% include "core/_form.html" with form=valuation_form %}
+        <button class="btn btn-primary btn-sm" type="submit">Save value</button>
+      </form>
+    </div></div>
+    <div class="card sarthi-stat"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th>As of</th><th class="text-end">Value</th><th></th></tr></thead>
+      <tbody>
+      {% for v in valuations %}
+      <tr><td>{{ v.as_of|date:"d-m-Y" }}{% if v.note %}<div class="small text-secondary">{{ v.note }}</div>{% endif %}</td>
+        <td class="text-end">{{ v.amount|inr }}</td>
+        <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-secondary" href="{% url 'valuation_edit' v.pk %}"><i class="bi bi-pencil"></i></a>
+          <form method="post" action="{% url 'valuation_delete' v.pk %}" class="d-inline" onsubmit="return confirm('Archive this value entry?');">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-archive"></i></button></form></td></tr>
+      {% empty %}<tr><td colspan="3" class="text-secondary p-3">No values recorded yet.</td></tr>{% endfor %}
+      </tbody></table></div></div>
+  </div>
+</div>
+<script src="{% static 'js/wealth.js' %}"></script>
+{% endblock %}

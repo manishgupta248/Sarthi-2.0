@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static sarthi_extras %}
+{% block title %}Net worth{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h3 mb-0">Net worth</h1>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{% url 'update_values' %}"><i class="bi bi-pencil"></i> Update values</a>
+    <a class="btn btn-outline-secondary" href="{% url 'investment_list' %}">Investments</a>
+    <a class="btn btn-outline-secondary" href="{% url 'liability_list' %}">Liabilities</a>
+    <a class="btn btn-outline-secondary" href="{% url 'export_holdings' %}"><i class="bi bi-file-earmark-excel"></i> Excel export</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><div class="card sarthi-stat h-100"><div class="card-body"><div class="text-secondary small">Assets (bank accounts + investments)</div><div class="fs-3 fw-semibold text-success">{{ summary.assets_total|inr }}</div></div></div></div>
+  <div class="col-md-4"><div class="card sarthi-stat h-100"><div class="card-body"><div class="text-secondary small">Liabilities</div><div class="fs-3 fw-semibold text-danger">{{ summary.liabilities_total|inr }}</div></div></div></div>
+  <div class="col-md-4"><div class="card sarthi-stat h-100"><div class="card-body"><div class="text-secondary small">Net worth</div><div class="fs-3 fw-semibold">{{ summary.net_worth|inr }}</div></div></div></div>
+</div>
+
+{% if events or attention %}
+<div class="row g-3 mb-3">
+  {% if events %}<div class="col-lg-6"><div class="card border-warning h-100"><div class="card-body">
+    <h2 class="h6"><i class="bi bi-calendar-event text-warning"></i> Coming up</h2>
+    {% for e in events %}
+    <div class="small py-1 border-bottom d-flex justify-content-between gap-2">
+      <span><a href="{% url 'holding_detail' e.holding.pk %}">{{ e.holding.display_name }}</a> ({{ e.holding.holder.full_name }}) - {{ e.label }}</span>
+      <span class="text-nowrap {% if e.overdue %}text-danger fw-semibold{% endif %}">{{ e.date|date:"d-m-Y" }}{% if e.overdue %} (overdue){% elif e.days == 0 %} (today){% else %} (in {{ e.days }} day{{ e.days|pluralize }}){% endif %}</span>
+    </div>
+    {% endfor %}
+  </div></div></div>{% endif %}
+  {% if attention %}<div class="col-lg-6"><div class="card border-warning h-100"><div class="card-body">
+    <h2 class="h6"><i class="bi bi-exclamation-triangle text-warning"></i> Needs attention</h2>
+    {% for item in attention %}
+    <div class="small py-1 border-bottom">
+      {% if item.holding %}<a href="{% url 'holding_detail' item.holding.pk %}">{{ item.holding.display_name }}</a> ({{ item.holding.holder.full_name }}){% else %}<a href="{% url 'account_detail' item.account.pk %}">{{ item.account.display_name }}</a> ({{ item.account.holder.full_name }}){% endif %} - {{ item.reason }}
+    </div>
+    {% endfor %}
+  </div></div></div>{% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8"><div class="card sarthi-stat h-100"><div class="card-body"><h2 class="h6">Net worth, last 12 months</h2><canvas id="chart-networth" height="120"></canvas></div></div></div>
+  <div class="col-lg-4"><div class="card sarthi-stat h-100"><div class="card-body"><h2 class="h6">Assets by type</h2><canvas id="chart-assets" height="200"></canvas></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card sarthi-stat h-100"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Assets</th><th class="text-end">Value</th><th class="text-end">Share</th></tr></thead>
+    <tbody>{% for p in summary.asset_parts %}<tr><td>{{ p.label }}</td><td class="text-end">{{ p.amount|inr }}</td><td class="text-end">{{ p.share }}%</td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-4"><div class="card sarthi-stat h-100"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Liabilities</th><th class="text-end">Owed</th><th class="text-end">Share</th></tr></thead>
+    <tbody>{% for p in summary.liability_parts %}<tr><td>{{ p.label }}</td><td class="text-end">{{ p.amount|inr }}</td><td class="text-end">{{ p.share }}%</td></tr>
+    {% empty %}<tr><td colspan="3" class="text-secondary p-3">No liabilities recorded.</td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-4"><div class="card sarthi-stat h-100"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>By person (net)</th><th class="text-end">Net worth</th></tr></thead>
+    <tbody>{% for p in summary.people %}<tr><td>{{ p.name }}</td><td class="text-end">{{ p.amount|inr }}</td></tr>
+    {% empty %}<tr><td colspan="2" class="text-secondary p-3">Nothing yet.</td></tr>{% endfor %}</tbody></table></div></div></div>
+</div>
+<p class="small text-secondary">Bank balances use the latest recorded balance. Investments and liabilities use the latest recorded value; deposits fall back to an estimate, and other items to their original amount (see the basis label on each page). Joint holdings are counted once, under the main holder. Closed items are left out after their closing date.</p>
+
+{{ chart|json_script:"chart-data" }}
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<script src="{% static 'js/networth_charts.js' %}"></script>
+{% endblock %}

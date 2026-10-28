@@ -40,3 +40,36 @@ class AccountRemarkAdmin(AllRecordsAdminMixin, admin.ModelAdmin):
     list_display = ("__str__", "created_at", "is_deleted")
     list_filter = ("is_deleted",)
     exclude = ("text",)  # remarks are read on the account page
+
+
+from .models import Transaction, TransactionCategory  # noqa: E402
+
+
+@admin.register(TransactionCategory)
+class TransactionCategoryAdmin(AllRecordsAdminMixin, admin.ModelAdmin):
+    list_display = ("name", "sort_order", "is_deleted")
+    list_filter = ("is_deleted",)
+
+
+@admin.register(Transaction)
+class TransactionAdmin(AllRecordsAdminMixin, admin.ModelAdmin):
+    list_display = ("__str__", "amount", "category", "is_deleted")
+    list_filter = ("is_deleted", "direction", "category")
+    exclude = ("reference",)  # references are encrypted; use the Transactions pages
+
+
+from .models import Holding, HoldingValuation  # noqa: E402
+
+
+@admin.register(Holding)
+class HoldingAdmin(AllRecordsAdminMixin, admin.ModelAdmin):
+    list_display = ("__str__", "kind", "status", "is_deleted")
+    list_filter = ("is_deleted", "kind", "status")
+    # Numbers and remarks are not editable here: use the Investments pages (audited Reveal).
+    exclude = ("identifier", "remarks")
+
+
+@admin.register(HoldingValuation)
+class HoldingValuationAdmin(AllRecordsAdminMixin, admin.ModelAdmin):
+    list_display = ("holding", "as_of", "amount", "is_deleted")
+    list_filter = ("is_deleted",)

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Excel export{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Excel export: investments and liabilities</h1>
+<div class="card sarthi-stat" style="max-width:640px;"><div class="card-body">
+  <p>Downloads one Excel sheet with every investment, loan given and liability, with current values and totals.</p>
+  <div class="alert alert-warning small"><i class="bi bi-exclamation-triangle"></i> An Excel file on your PC is <strong>not encrypted</strong>. By default numbers show only the last 4 characters and remarks are hidden. Delete the file when you are done. Every export is recorded in the audit log.</div>
+  <form method="post" onsubmit="var f=document.getElementById('full'); return !f.checked || confirm('The file will contain FULL policy and loan numbers and is NOT encrypted. Delete it after use. Continue?');">{% csrf_token %}
+    <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="full" value="1" id="full">
+      <label class="form-check-label" for="full">Include FULL numbers and remarks</label></div>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-file-earmark-excel"></i> Download Excel file</button>
+    <a class="btn btn-outline-secondary" href="{% url 'networth_page' %}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load sarthi_extras %}
+{% block title %}Update values{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Update values</h1>
+<p class="text-secondary">Enter today's value for each investment, or the amount still owed for each loan. Leave a row blank to skip it. Commas are fine.</p>
+<form method="post">{% csrf_token %}
+  <div class="mb-3" style="max-width:260px;"><label class="form-label" for="as_of">Value as of</label>
+    <input class="form-control" type="date" id="as_of" name="as_of" value="{{ as_of }}"></div>
+  <div class="card sarthi-stat mb-3"><div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Item</th><th>Holder</th><th class="text-end">Current</th><th style="width:220px;">New value (INR)</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.holding.display_name }}<div class="small text-secondary">{{ row.holding.get_kind_display }}</div></td>
+      <td>{{ row.holding.holder.full_name }}</td>
+      <td class="text-end">{{ row.latest.amount|inr }}<div class="small text-secondary">{% if row.latest.source == "recorded" %}recorded {{ row.latest.as_of|date:"d-m-Y" }}{% elif row.latest.source == "estimated" %}estimated{% elif row.latest.source == "cost" %}original amount{% else %}no value{% endif %}</div></td>
+      <td><input class="form-control" type="text" inputmode="decimal" autocomplete="off" name="amount_{{ row.holding.pk }}" value="{{ row.entered }}"></td>
+    </tr>
+    {% empty %}<tr><td colspan="4" class="text-secondary p-4">No active investments or liabilities yet.</td></tr>{% endfor %}
+    </tbody></table></div></div>
+  <button class="btn btn-primary" type="submit">Save values</button>
+  <a class="btn btn-outline-secondary" href="{% url 'networth_page' %}">Cancel</a>
+</form>
+{% endblock %}

@@ -61,3 +61,18 @@ Paste AGENTS.md and CURRENT_STATE.md, then say which phase or step you are on.
 - Never display a stored account number or customer ID except through the audited Reveal view.
 - To add a card to the home dashboard, call register_dashboard_widget in AppConfig.ready().
 - Phase smoke test: .\scripts\smoke_phase4a.ps1
+
+## Phase 4B rules
+- Transactions and balance checks live in apps/wealth (models.py, reconciliation.py, views_transactions.py).
+- Never put account numbers in transaction descriptions; references are encrypted.
+- Phase smoke test: .\scripts\smoke_phase4b.ps1
+
+## Phase 4C rules
+- Report logic lives in apps/wealth/reports.py as plain functions (no HTML), so other channels can reuse it.
+- When adding a transaction category, set its group; the group decides how reports count it.
+- Phase smoke test: .\scripts\smoke_phase4c.ps1
+
+## Phase 5 rules
+- Investments, loans given and liabilities are Holding records (apps/wealth). To add a new type, add it to Holding.Kind and to KIND_FIELDS, KIND_LABELS and REQUIRED in forms_holdings.py (and LIABILITY_KINDS if it is a liability).
+- Value logic lives in apps/wealth/networth.py as plain functions (no HTML) so reminders and Telegram can reuse them.
+- Phase smoke test: .\scripts\smoke_phase5.ps1

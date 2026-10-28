@@ -20,8 +20,9 @@ from apps.family.models import Person
 
 from .export import build_accounts_workbook
 from .forms import AccountDocumentForm, AccountForm, InstitutionForm, RemarkForm, SnapshotForm
-from .models import Account, AccountType, BalanceSnapshot, Institution
+from .models import Account, AccountType, BalanceSnapshot, Institution, Transaction
 from .services import latest_snapshot_map, monthly_trend, wealth_summary
+from .reconciliation import account_reconciliation
 
 logger = logging.getLogger(__name__)
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -112,6 +113,8 @@ def account_detail(request, pk):
         "remarks": account.remark_entries.all(),
         "remark_form": RemarkForm(),
         "document_form": AccountDocumentForm(),
+        "recent_transactions": Transaction.objects.filter(account=account).select_related("category")[:8],
+        "estimate": account_reconciliation(account),
     })
 
 
@@ -310,4 +313,5 @@ def export_accounts(request):
         response["Cache-Control"] = "private, no-store"
         return response
     return render(request, "wealth/export.html")
+
 

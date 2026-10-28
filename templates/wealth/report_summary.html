@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load static sarthi_extras %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h3 mb-0">Income, expenses and investments</h1>
+  <form method="post" action="{% url 'report_export' %}">{% csrf_token %}
+    <input type="hidden" name="year" value="{{ year }}"><input type="hidden" name="basis" value="{{ basis }}"><input type="hidden" name="person" value="{{ person_id }}">
+    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-file-earmark-excel"></i> Excel report for {{ year_label }}</button></form>
+</div>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <div class="btn-group btn-group-sm">
+    <a class="btn {% if view == 'monthly' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?view=monthly&year={{ year }}&basis={{ basis }}&person={{ person_id }}">Month by month</a>
+    <a class="btn {% if view == 'yearly' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?view=yearly&basis={{ basis }}&person={{ person_id }}">Year by year</a>
+  </div>
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'report_categories' %}?basis={{ basis }}&year={{ year }}&person={{ person_id }}"><i class="bi bi-tags"></i> By category</a>
+  <form method="get" class="d-flex flex-wrap gap-2 ms-auto">
+    <input type="hidden" name="view" value="{{ view }}">
+    <select name="basis" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="fy" {% if basis == "fy" %}selected{% endif %}>Financial year (Apr-Mar)</option>
+      <option value="calendar" {% if basis == "calendar" %}selected{% endif %}>Calendar year</option>
+    </select>
+    {% if view == "monthly" %}<select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+      {% for y in years %}<option value="{{ y.value }}" {% if y.value == year %}selected{% endif %}>{{ y.label }}</option>{% endfor %}
+    </select>{% endif %}
+    <select name="person" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Whole family</option>
+      {% for p in people %}<option value="{{ p.pk }}" {% if person_id == p.pk %}selected{% endif %}>{{ p.full_name }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+{% if uncategorised %}
+<div class="alert alert-warning small"><i class="bi bi-exclamation-triangle"></i> {{ uncategorised }} transaction{{ uncategorised|pluralize }} in this view {{ uncategorised|pluralize:"has,have" }} no category and {{ uncategorised|pluralize:"is,are" }} not counted as income, expenses or investments.
+  <a href="{% url 'transaction_list' %}?category=none&period=all">Review them</a>.</div>
+{% endif %}
+
+<div class="card sarthi-stat mb-3"><div class="card-body"><canvas id="chart-summary" height="110"></canvas></div></div>
+
+<div class="card sarthi-stat"><div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>{% if view == "monthly" %}Month{% else %}Year{% endif %}</th><th class="text-end">Income</th><th class="text-end">Expenses</th><th class="text-end">Invested</th><th class="text-end">Left over</th><th class="text-end">Savings rate</th><th class="text-end">Not classified</th><th class="text-end">Entries</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td>{% if view == "monthly" %}<a href="{% url 'report_categories' %}?group=expense&year={{ r.year }}&month={{ r.month }}&basis={{ basis }}&person={{ person_id }}">{{ r.label }}</a>
+        {% else %}<a href="{% url 'report_summary' %}?view=monthly&year={{ r.year }}&basis={{ basis }}&person={{ person_id }}">{{ r.label }}</a>{% endif %}</td>
+    <td class="text-end text-success">{{ r.income|inr }}</td>
+    <td class="text-end text-danger">{{ r.expenses|inr }}</td>
+    <td class="text-end">{{ r.invested|inr }}</td>
+    <td class="text-end fw-semibold">{{ r.leftover|inr }}</td>
+    <td class="text-end">{% if r.savings_rate is not None %}{{ r.savings_rate }}%{% else %}-{% endif %}</td>
+    <td class="text-end text-secondary">{{ r.unclassified|inr }}</td>
+    <td class="text-end text-secondary">{{ r.count }}</td>
+  </tr>
+  {% empty %}<tr><td colspan="8" class="text-secondary p-4">No transactions yet.</td></tr>{% endfor %}
+  {% if totals %}
+  <tr class="table-active fw-bold"><td>Total {{ year_label }}</td>
+    <td class="text-end">{{ totals.income|inr }}</td><td class="text-end">{{ totals.expenses|inr }}</td><td class="text-end">{{ totals.invested|inr }}</td>
+    <td class="text-end">{{ totals.leftover|inr }}</td><td class="text-end">{% if totals.savings_rate is not None %}{{ totals.savings_rate }}%{% else %}-{% endif %}</td>
+    <td class="text-end">{{ totals.unclassified|inr }}</td><td class="text-end">{{ totals.count }}</td></tr>
+  {% endif %}
+  </tbody></table></div></div>
+<p class="small text-secondary mt-2">Income = money in minus out in income categories. Expenses = money out minus in (refunds reduce it). Left over = income - expenses - invested. Transfers between your own accounts are left out. "Not classified" is the net money out in categories grouped as Other, plus uncategorised entries.</p>
+
+{{ chart|json_script:"chart-data" }}
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<script src="{% static 'js/report_charts.js' %}"></script>
+{% endblock %}

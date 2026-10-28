@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static sarthi_extras %}
+{% block title %}Category report{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div><h1 class="h3 mb-0">{{ group_title }} by category</h1><div class="text-secondary">{{ period_label }}</div></div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'report_summary' %}?view=monthly&year={{ year }}&basis={{ basis }}&person={{ person_id }}">Summary report</a>
+    <form method="post" action="{% url 'report_export' %}">{% csrf_token %}
+      <input type="hidden" name="year" value="{{ year }}"><input type="hidden" name="basis" value="{{ basis }}"><input type="hidden" name="person" value="{{ person_id }}">
+      <button class="btn btn-outline-secondary btn-sm" type="submit"><i class="bi bi-file-earmark-excel"></i> Excel report</button></form>
+  </div>
+</div>
+
+<ul class="nav nav-pills mb-3">
+  {% for value, title in groups %}<li class="nav-item"><a class="nav-link py-1 {% if value == group %}active{% endif %}" href="?group={{ value }}&year={{ year }}&month={{ month }}&basis={{ basis }}&person={{ person_id }}">{{ title }}</a></li>{% endfor %}
+</ul>
+
+<form method="get" class="d-flex flex-wrap gap-2 mb-3">
+  <input type="hidden" name="group" value="{{ group }}">
+  <select name="basis" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="fy" {% if basis == "fy" %}selected{% endif %}>Financial year (Apr-Mar)</option>
+    <option value="calendar" {% if basis == "calendar" %}selected{% endif %}>Calendar year</option>
+  </select>
+  <select name="year" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    {% for y in years %}<option value="{{ y.value }}" {% if y.value == year %}selected{% endif %}>{{ y.label }}</option>{% endfor %}
+  </select>
+  <select name="month" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">Whole year</option>
+    {% for number, name in months %}<option value="{{ number }}" {% if number == month %}selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select>
+  <select name="person" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">Whole family</option>
+    {% for p in people %}<option value="{{ p.pk }}" {% if person_id == p.pk %}selected{% endif %}>{{ p.full_name }}</option>{% endfor %}
+  </select>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-7"><div class="card sarthi-stat h-100"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Category</th><th class="text-end">{% if is_income %}Income{% else %}Amount{% endif %}</th><th class="text-end">Share</th><th class="text-end">Entries</th><th class="text-end">Vs {{ compare_label }}</th></tr></thead>
+    <tbody>
+    {% for i in items %}
+    <tr><td>{{ i.name }}</td><td class="text-end">{{ i.net|inr }}</td><td class="text-end">{{ i.share }}%</td><td class="text-end text-secondary">{{ i.count }}</td>
+      <td class="text-end small">{% if i.change_pct is not None %}<span class="{% if i.change > 0 %}text-danger{% elif i.change < 0 %}text-success{% endif %}">{{ i.change_pct }}%</span>{% elif i.net %}<span class="text-secondary">new</span>{% else %}-{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="5" class="text-secondary p-4">Nothing in this group for the period.</td></tr>{% endfor %}
+    <tr class="table-active fw-bold"><td>Total</td><td class="text-end">{{ total|inr }}</td><td></td><td></td><td class="text-end small text-secondary">{{ compare_label|capfirst }}: {{ previous_total|inr }}</td></tr>
+    </tbody></table></div></div></div>
+  <div class="col-lg-5"><div class="card sarthi-stat h-100"><div class="card-body"><canvas id="chart-categories" height="240"></canvas></div></div></div>
+</div>
+<p class="small text-secondary">In the comparison column, red means higher than the {{ compare_label }}, green means lower (for income, read it the other way round). Refunds reduce expense totals.</p>
+
+{% if matrix %}
+<div class="card sarthi-stat mb-3"><div class="card-body pb-0"><h2 class="h6">Month by month</h2></div>
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Category</th>{% for column in matrix.columns %}<th class="text-end text-nowrap">{{ column }}</th>{% endfor %}<th class="text-end">Total</th></tr></thead>
+    <tbody>
+    {% for row in matrix.rows %}
+    <tr><td class="text-nowrap">{{ row.name }}</td>{% for value in row.values %}<td class="text-end small">{% if value %}{{ value|inr }}{% else %}<span class="text-secondary">-</span>{% endif %}</td>{% endfor %}<td class="text-end fw-semibold">{{ row.total|inr }}</td></tr>
+    {% empty %}<tr><td colspan="14" class="text-secondary p-3">Nothing in this group for the year.</td></tr>{% endfor %}
+    <tr class="table-active fw-bold"><td>Total</td>{% for value in matrix.totals %}<td class="text-end small">{{ value|inr }}</td>{% endfor %}<td class="text-end">{{ matrix.grand_total|inr }}</td></tr>
+    </tbody></table></div></div>
+{% endif %}
+
+<div class="card sarthi-stat"><div class="card-body pb-0"><h2 class="h6">Largest items</h2></div>
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <tbody>
+    {% for t in top %}
+    <tr><td class="text-nowrap">{{ t.date|date:"d-m-Y" }}</td><td>{{ t.category.name|default:"(Uncategorised)" }}</td>
+      <td class="small">{{ t.description }}{% if t.counterparty %} <span class="text-secondary">({{ t.counterparty }})</span>{% endif %}<div class="text-secondary">{{ t.account.display_name }} &middot; {{ t.account.holder.full_name }}</div></td>
+      <td class="text-end">{{ t.amount|inr }}</td></tr>
+    {% empty %}<tr><td class="text-secondary p-3">Nothing to show.</td></tr>{% endfor %}
+    </tbody></table></div></div>
+
+{{ chart|json_script:"chart-data" }}
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<script src="{% static 'js/report_charts.js' %}"></script>
+{% endblock %}

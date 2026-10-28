@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load sarthi_extras %}
+{% block title %}Transactions{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div><h1 class="h3 mb-0">Transactions</h1><div class="text-secondary">Showing: <strong>{{ period_label }}</strong></div></div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'transfer_add' %}"><i class="bi bi-arrow-left-right"></i> Transfer</a>
+    <a class="btn btn-primary" href="{% url 'transaction_add' %}"><i class="bi bi-plus-lg"></i> Add transaction</a>
+  </div>
+</div>
+
+<div class="card sarthi-stat mb-3"><div class="card-body py-2">
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+    <span class="small text-secondary me-1">Year:</span>
+    {% for y in nav.years %}<a class="btn btn-sm {% if y.active %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ y.url }}">{{ y.year }}</a>{% endfor %}
+    <a class="btn btn-sm {% if nav.all_active %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ nav.all_url }}">All time</a>
+    <a class="btn btn-sm btn-outline-secondary ms-auto" href="{% url 'transaction_archive' %}"><i class="bi bi-archive"></i> Archive overview</a>
+  </div>
+  {% if nav.months %}
+  <div class="d-flex flex-wrap align-items-center gap-1">
+    <span class="small text-secondary me-1">Month:</span>
+    <a class="btn btn-sm {% if not nav.month_active %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ nav.year_url }}">Whole year</a>
+    {% for m in nav.months %}<a class="btn btn-sm {% if m.active %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{{ m.url }}">{{ m.label }}{% if m.count %} <span class="badge text-bg-light">{{ m.count }}</span>{% endif %}</a>{% endfor %}
+  </div>
+  {% endif %}
+</div></div>
+
+<form method="get" class="row g-2 mb-3">
+  {% if selected.date_from or selected.date_to %}{% else %}<input type="hidden" name="period" value="{% if nav.all_active %}all{% endif %}">{% endif %}
+  <div class="col-md-3"><select name="account" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">All accounts</option>
+    {% for a in accounts %}<option value="{{ a.pk }}" {% if selected.account == a.pk|stringformat:"s" %}selected{% endif %}>{{ a }}</option>{% endfor %}
+  </select></div>
+  <div class="col-md-2"><select name="person" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">All holders</option>
+    {% for p in people %}<option value="{{ p.pk }}" {% if selected.person == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.full_name }}</option>{% endfor %}
+  </select></div>
+  <div class="col-md-2"><select name="category" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">All categories</option>
+    <option value="none" {% if selected.category == "none" %}selected{% endif %}>Uncategorised</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if selected.category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select></div>
+  <div class="col-md-2"><select name="direction" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">In and out</option>
+    <option value="in" {% if selected.direction == "in" %}selected{% endif %}>Money in</option>
+    <option value="out" {% if selected.direction == "out" %}selected{% endif %}>Money out</option>
+  </select></div>
+  <div class="col-md-3"><div class="input-group input-group-sm">
+    <input class="form-control" type="date" name="date_from" value="{{ selected.date_from }}" title="From">
+    <input class="form-control" type="date" name="date_to" value="{{ selected.date_to }}" title="To">
+    <button class="btn btn-outline-secondary" type="submit" title="A date range replaces the year and month choice"><i class="bi bi-funnel"></i></button></div></div>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-sm-4"><div class="card sarthi-stat"><div class="card-body py-2"><div class="text-secondary small">Money in</div><div class="fw-semibold text-success">{{ money_in|inr }}</div></div></div></div>
+  <div class="col-sm-4"><div class="card sarthi-stat"><div class="card-body py-2"><div class="text-secondary small">Money out</div><div class="fw-semibold text-danger">{{ money_out|inr }}</div></div></div></div>
+  <div class="col-sm-4"><div class="card sarthi-stat"><div class="card-body py-2"><div class="text-secondary small">Net (for what is shown)</div><div class="fw-semibold">{{ net|inr }}</div></div></div></div>
+</div>
+
+<div class="card sarthi-stat"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+  <thead><tr><th>Date</th><th>Account</th><th>Category</th><th>Details</th><th class="text-end">In</th><th class="text-end">Out</th><th></th></tr></thead>
+  <tbody>
+  {% for t in page %}
+  <tr>
+    <td class="text-nowrap">{{ t.date|date:"d-m-Y" }}</td>
+    <td><a href="{% url 'account_detail' t.account.pk %}">{{ t.account.display_name }}</a><div class="small text-secondary">{{ t.account.holder.full_name }}</div></td>
+    <td>{{ t.category.name|default:"-" }}</td>
+    <td class="small">{{ t.description }}{% if t.counterparty %}<div class="text-secondary">{{ t.counterparty }}</div>{% endif %}{% if t.reference %}<div class="text-secondary">Ref: {{ t.reference }}</div>{% endif %}</td>
+    <td class="text-end text-success">{% if t.direction == "in" %}{{ t.amount|inr }}{% endif %}</td>
+    <td class="text-end text-danger">{% if t.direction == "out" %}{{ t.amount|inr }}{% endif %}</td>
+    <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-secondary" href="{% url 'transaction_edit' t.pk %}"><i class="bi bi-pencil"></i></a>
+      <form method="post" action="{% url 'transaction_delete' t.pk %}" class="d-inline" onsubmit="return confirm('Archive this transaction?');">{% csrf_token %}
+        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-archive"></i></button></form></td>
+  </tr>
+  {% empty %}<tr><td colspan="7" class="text-secondary p-4">No transactions in this period.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+
+<nav class="mt-3 d-flex gap-2 align-items-center">
+  {% if page.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{{ base_query }}page={{ page.previous_page_number }}">Newer</a>{% endif %}
+  <span class="small text-secondary">Page {{ page.number }} of {{ page.paginator.num_pages }} ({{ page.paginator.count }} transaction{{ page.paginator.count|pluralize }})</span>
+  {% if page.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{{ base_query }}page={{ page.next_page_number }}">Older</a>{% endif %}
+</nav>
+{% endblock %}

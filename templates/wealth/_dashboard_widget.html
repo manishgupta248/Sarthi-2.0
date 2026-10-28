@@ -1,8 +1,9 @@
 {% load sarthi_extras %}
 <div class="card sarthi-stat h-100"><div class="card-body">
-  <h2 class="h6">Wealth</h2>
-  <div class="fs-3 fw-semibold">{{ data.total|inr }}</div>
-  <div class="text-secondary small mb-2">Total of latest balances across {{ data.account_count }} open account{{ data.account_count|pluralize }}</div>
-  {% if data.attention_count %}<div class="small text-warning mb-2"><i class="bi bi-exclamation-triangle"></i> {{ data.attention_count }} account{{ data.attention_count|pluralize }} need a balance update</div>{% endif %}
+  <h2 class="h6">Net worth</h2>
+  <div class="fs-3 fw-semibold">{{ data.net_worth|inr }}</div>
+  <div class="text-secondary small mb-2">Assets {{ data.assets|inr }} &middot; Liabilities {{ data.liabilities|inr }}</div>
+  {% if data.attention_count %}<div class="small text-warning mb-2"><i class="bi bi-exclamation-triangle"></i> {{ data.attention_count }} item{{ data.attention_count|pluralize }} need attention or are coming up</div>{% endif %}
+  <a class="small me-3" href="{% url 'networth_page' %}">Open net worth</a>
   <a class="small" href="{% url 'wealth_dashboard' %}">Open wealth dashboard</a>
 </div></div>

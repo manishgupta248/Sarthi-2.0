@@ -52,14 +52,14 @@ class AccountForm(BootstrapFormMixin, forms.ModelForm):
     field_order = [
         "holder", "joint_holder", "nominee", "account_type", "institution", "nickname",
         "new_account_number", "ifsc_code", "new_customer_id", "branch",
-        "opening_date", "is_closed", "closed_on", "first_remark",
+        "opening_date", "is_closed", "closed_on", "full_tracking", "first_remark",
     ]
 
     class Meta:
         model = Account
         fields = [
             "holder", "nominee", "account_type", "institution", "nickname",
-            "ifsc_code", "branch", "opening_date", "is_closed", "closed_on",
+            "ifsc_code", "branch", "opening_date", "is_closed", "closed_on", "full_tracking",
         ]
         widgets = {
             "opening_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
@@ -189,3 +189,92 @@ class SnapshotForm(BootstrapFormMixin, forms.ModelForm):
             if existing.exists():
                 self.add_error("as_of", "A balance for this date already exists. Edit that one instead.")
         return data
+
+
+
+from decimal import Decimal  # noqa: E402
+
+from .models import Transaction  # noqa: E402
+
+
+class TransactionForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Transaction
+        fields = [
+            "account", "date", "direction", "amount", "category",
+            "description", "counterparty", "reference",
+        ]
+        widgets = {
+            "date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "amount": forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
+            "reference": forms.TextInput(attrs={"autocomplete": "off"}),
+        }
+        help_texts = {
+            "amount": "Always a positive number. Choose Money in or Money out above.",
+            "description": "Never put account numbers here.",
+            "reference": "Cheque or transaction number. Stored encrypted.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].empty_label = "- Uncategorised -"
+        if not self.instance.pk:
+            self.fields["account"].queryset = Account.objects.filter(is_closed=False)
+
+    def clean_date(self):
+        value = self.cleaned_data["date"]
+        if value > date.today():
+            raise ValidationError("The date cannot be in the future.")
+        return value
+
+
+class TransferForm(BootstrapFormMixin, forms.Form):
+    from_account = forms.ModelChoiceField(
+        queryset=Account.objects.filter(is_closed=False), label="From account"
+    )
+    to_account = forms.ModelChoiceField(
+        queryset=Account.objects.filter(is_closed=False), label="To account"
+    )
+    date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+    amount = forms.DecimalField(
+        max_digits=16, decimal_places=2, min_value=Decimal("0.01"),
+        widget=forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
+    )
+    description = forms.CharField(
+        max_length=200, required=False,
+        help_text="Optional. Never put account numbers here.",
+    )
+
+    def clean_date(self):
+        value = self.cleaned_data["date"]
+        if value > date.today():
+            raise ValidationError("The date cannot be in the future.")
+        return value
+
+    def clean(self):
+        data = super().clean()
+        if data.get("from_account") and data.get("from_account") == data.get("to_account"):
+            self.add_error("to_account", "Choose two different accounts.")
+        return data
+
+
+from .models import TransactionCategory  # noqa: E402
+
+
+class CategoryForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = TransactionCategory
+        fields = ["name", "group", "sort_order"]
+        help_texts = {
+            "group": "Decides where this category counts in reports. Transfers between your own accounts are left out of income and expenses.",
+            "sort_order": "Lower numbers appear first in lists.",
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data["name"].strip()
+        duplicates = TransactionCategory.objects.filter(name__iexact=name)
+        if self.instance.pk:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise ValidationError("This category already exists.")
+        return name
